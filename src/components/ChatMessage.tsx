@@ -4,7 +4,7 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism'
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 
 interface ChatMessageProps {
   role: 'user' | 'assistant' | 'system'
@@ -20,11 +20,79 @@ function formatTime() {
 export default function ChatMessage({ role, content, isStreaming }: ChatMessageProps) {
   const isUser = role === 'user'
   const [copied, setCopied] = useState(false)
+  const [playing, setPlaying] = useState(false)
+  const audioRef = useRef<HTMLAudioElement | null>(null)
 
   const copyMessage = () => {
     navigator.clipboard.writeText(content)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
+  }
+
+  const playTTS = async () => {
+    // If already playing, stop
+    if (playing && audioRef.current) {
+      audioRef.current.pause()
+      audioRef.current.currentTime = 0
+      setPlaying(false)
+      return
+    }
+
+    setPlaying(true)
+    try {
+      const res = await fetch('/api/tts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: content }),
+      })
+
+      if (!res.ok) {
+        // Fallback to browser Speech Synthesis
+        fallbackSpeak(content)
+        return
+      }
+
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const audio = new Audio(url)
+      audioRef.current = audio
+      audio.onended = () => {
+        setPlaying(false)
+        URL.revokeObjectURL(url)
+      }
+      audio.onerror = () => {
+        setPlaying(false)
+        URL.revokeObjectURL(url)
+        fallbackSpeak(content)
+      }
+      audio.play()
+    } catch {
+      fallbackSpeak(content)
+    }
+  }
+
+  const fallbackSpeak = (text: string) => {
+    if (!('speechSynthesis' in window)) {
+      setPlaying(false)
+      return
+    }
+    window.speechSynthesis.cancel()
+    const utterance = new SpeechSynthesisUtterance(text)
+    utterance.rate = 1.0
+    utterance.pitch = 1.3
+    // Try to find a female/Japanese voice
+    const voices = window.speechSynthesis.getVoices()
+    const preferred = voices.find(v =>
+      v.lang.startsWith('ja') && v.name.toLowerCase().includes('female')
+    ) || voices.find(v =>
+      v.lang.startsWith('ja')
+    ) || voices.find(v =>
+      v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('zira') || v.name.toLowerCase().includes('haruka')
+    )
+    if (preferred) utterance.voice = preferred
+    utterance.onend = () => setPlaying(false)
+    utterance.onerror = () => setPlaying(false)
+    window.speechSynthesis.speak(utterance)
   }
 
   return (
@@ -81,6 +149,17 @@ export default function ChatMessage({ role, content, isStreaming }: ChatMessageP
         {/* Actions */}
         {!isUser && content && !isStreaming && (
           <div className="msg-actions">
+            <button className="msg-action-btn" onClick={playTTS} title={playing ? 'Dừng phát' : 'Nghe giọng nói'}>
+              {playing ? (
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#818cf8" strokeWidth="2">
+                  <rect x="6" y="4" width="4" height="16" rx="1" /><rect x="14" y="4" width="4" height="16" rx="1" />
+                </svg>
+              ) : (
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" /><path d="M15.54 8.46a5 5 0 0 1 0 7.07" /><path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
+                </svg>
+              )}
+            </button>
             <button className="msg-action-btn" onClick={copyMessage} title={copied ? 'Đã copy!' : 'Copy'}>
               {copied ? (
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4ade80" strokeWidth="2">

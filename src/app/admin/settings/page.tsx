@@ -7,6 +7,7 @@ export default function AdminSettingsPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [providers, setProviders] = useState<{ id: string; name: string }[]>([])
 
   useEffect(() => {
     fetch('/api/admin/settings')
@@ -14,6 +15,12 @@ export default function AdminSettingsPage() {
       .then(setSettings)
       .catch(console.error)
       .finally(() => setLoading(false))
+    fetch('/api/admin/providers')
+      .then((res) => res.json())
+      .then((data) => {
+        if (Array.isArray(data)) setProviders(data.map((p: any) => ({ id: p.id, name: p.name })))
+      })
+      .catch(() => {})
   }, [])
 
   const handleSave = async () => {
@@ -112,6 +119,72 @@ export default function AdminSettingsPage() {
                 onChange={(e) => updateSetting('max_messages_per_conversation', e.target.value)}
                 className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
               />
+            </div>
+          </div>
+        </div>
+
+        {/* TTS (Text-to-Speech) */}
+        <div className="bg-gray-800 rounded-xl border border-gray-700 p-6">
+          <h2 className="text-lg font-semibold text-white mb-1">Giọng nói AI (TTS)</h2>
+          <p className="text-xs text-gray-400 mb-4">Cài đặt Text-to-Speech cho nhân vật AI. Hỗ trợ OpenAI-compatible TTS API.</p>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm text-gray-300 mb-1">Provider cho TTS</label>
+              <select
+                value={settings.tts_provider_id || ''}
+                onChange={(e) => updateSetting('tts_provider_id', e.target.value)}
+                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
+              >
+                <option value="">Tự động (dùng provider đang bật)</option>
+                {providers.map((p) => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm text-gray-300 mb-1">TTS Model</label>
+                <input
+                  type="text"
+                  value={settings.tts_model || ''}
+                  onChange={(e) => updateSetting('tts_model', e.target.value)}
+                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  placeholder="tts-1"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-gray-300 mb-1">Giọng (Voice)</label>
+                <select
+                  value={settings.tts_voice || 'nova'}
+                  onChange={(e) => updateSetting('tts_voice', e.target.value)}
+                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                >
+                  <option value="alloy">Alloy (trung tính)</option>
+                  <option value="echo">Echo (nam trầm)</option>
+                  <option value="fable">Fable (nam Anh)</option>
+                  <option value="onyx">Onyx (nam trầm)</option>
+                  <option value="nova">Nova (nữ trẻ) ★</option>
+                  <option value="shimmer">Shimmer (nữ ấm)</option>
+                </select>
+                <p className="text-xs text-gray-500 mt-1">Nova = giọng nữ wibu-friendly nhất 🎀</p>
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm text-gray-300 mb-1">Tốc độ nói ({settings.tts_speed || '1.0'}x)</label>
+              <input
+                type="range"
+                min="0.5"
+                max="2.0"
+                step="0.1"
+                value={settings.tts_speed || '1.0'}
+                onChange={(e) => updateSetting('tts_speed', e.target.value)}
+                className="w-full accent-blue-500"
+              />
+              <div className="flex justify-between text-xs text-gray-500">
+                <span>0.5x (chậm)</span>
+                <span>1.0x</span>
+                <span>2.0x (nhanh)</span>
+              </div>
             </div>
           </div>
         </div>

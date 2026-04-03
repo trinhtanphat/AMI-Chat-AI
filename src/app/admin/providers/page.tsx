@@ -26,6 +26,10 @@ export default function AdminProvidersPage() {
   const [editProvider, setEditProvider] = useState<Provider | null>(null)
   const [form, setForm] = useState({ name: '', baseUrl: '', apiKey: '' })
   const [saving, setSaving] = useState(false)
+  const [fetchingModels, setFetchingModels] = useState<string | null>(null)
+  const [discoveredModels, setDiscoveredModels] = useState<{ id: string; name: string; owned_by: string }[]>([])
+  const [showDiscovered, setShowDiscovered] = useState<string | null>(null)
+  const [addingModels, setAddingModels] = useState(false)
 
   useEffect(() => {
     fetchProviders()
@@ -98,6 +102,53 @@ export default function AdminProvidersPage() {
     if (!confirm('Bạn có chắc muốn xóa provider này? Tất cả models liên quan cũng sẽ bị xóa.')) return
     await fetch(`/api/admin/providers?id=${id}`, { method: 'DELETE' })
     fetchProviders()
+  }
+
+  const fetchModelsFromProvider = async (providerId: string) => {
+    setFetchingModels(providerId)
+    setDiscoveredModels([])
+    try {
+      const res = await fetch('/api/admin/providers/fetch-models', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ providerId }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        alert(data.error || 'Không thể lấy danh sách model')
+        return
+      }
+      setDiscoveredModels(data.models || [])
+      setShowDiscovered(providerId)
+    } catch (err) {
+      alert('Lỗi kết nối đến provider')
+    } finally {
+      setFetchingModels(null)
+    }
+  }
+
+  const addDiscoveredModels = async (providerId: string, models: { id: string; name: string }[]) => {
+    setAddingModels(true)
+    try {
+      const res = await fetch('/api/admin/providers/fetch-models', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ providerId, models }),
+      })
+      const data = await res.json()
+      if (res.ok) {
+        alert(`Đã thêm ${data.added} model(s) thành công!`)
+        setShowDiscovered(null)
+        setDiscoveredModels([])
+        fetchProviders()
+      } else {
+        alert(data.error || 'Lỗi khi thêm model')
+      }
+    } catch {
+      alert('Lỗi kết nối')
+    } finally {
+      setAddingModels(false)
+    }
   }
 
   if (loading) {
@@ -175,21 +226,84 @@ export default function AdminProvidersPage() {
                 <span>{provider.models.length} model(s)</span>
               </div>
 
-              {provider.models.length > 0 && (
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {provider.models.map((model) => (
-                    <span
-                      key={model.id}
-                      className={`px-2 py-1 rounded text-xs ${
-                        model.isActive
-                          ? 'bg-blue-600/20 text-blue-400'
-                          : 'bg-gray-700 text-gray-500'
-                      } ${model.isDefault ? 'ring-1 ring-blue-500' : ''}`}
-                    >
-                      {model.name}
-                      {model.isDefault && ' ★'}
+              <div className="mt-3 flex items-center gap-2 flex-wrap">
+                <button
+                  onClick={() => fetchModelsFromProvider(provider.id)}
+                  disabled={fetchingModels === provider.id}
+                  className="px-3 py-1.5 text-xs font-medium rounded-lg bg-indigo-600/20 text-indigo-400 hover:bg-indigo-600/30 transition flex items-center gap-1.5 disabled:opacity-50"
+                >
+                  {fetchingModels === provider.id ? (
+                    <>
+                      <svg className="animate-spin w-3 h-3" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
+                      Đang lấy...
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182" /></svg>
+                      Lấy danh sách model từ API
+                    </>
+                  )}
+                </button>
+
+                {provider.models.map((model) => (
+                  <span
+                    key={model.id}
+                    className={`px-2 py-1 rounded text-xs ${
+                      model.isActive
+                        ? 'bg-blue-600/20 text-blue-400'
+                        : 'bg-gray-700 text-gray-500'
+                    } ${model.isDefault ? 'ring-1 ring-blue-500' : ''}`}
+                  >
+                    {model.name}
+                    {model.isDefault && ' ★'}
+                  </span>
+                ))}
+              </div>
+
+              {/* Discovered models panel */}
+              {showDiscovered === provider.id && discoveredModels.length > 0 && (
+                <div className="mt-3 p-4 bg-gray-900 rounded-lg border border-gray-600">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-sm font-medium text-white">
+                      Tìm thấy {discoveredModels.length} model(s) từ API
                     </span>
-                  ))}
+                    <button onClick={() => setShowDiscovered(null)} className="text-gray-400 hover:text-white text-xs">✕ Đóng</button>
+                  </div>
+                  <div className="space-y-2 max-h-48 overflow-y-auto">
+                    {discoveredModels.map((m) => {
+                      const exists = provider.models.some((pm) => pm.modelId === m.id)
+                      return (
+                        <div key={m.id} className="flex items-center justify-between text-sm">
+                          <div>
+                            <span className="text-white">{m.name}</span>
+                            {m.owned_by && <span className="text-gray-500 ml-2 text-xs">({m.owned_by})</span>}
+                          </div>
+                          {exists ? (
+                            <span className="text-xs text-green-400">✓ Đã có</span>
+                          ) : (
+                            <span className="text-xs text-yellow-400">Mới</span>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                  {discoveredModels.some((m) => !provider.models.some((pm) => pm.modelId === m.id)) && (
+                    <button
+                      onClick={() => addDiscoveredModels(
+                        provider.id,
+                        discoveredModels.filter((m) => !provider.models.some((pm) => pm.modelId === m.id))
+                      )}
+                      disabled={addingModels}
+                      className="mt-3 w-full py-2 text-sm font-medium rounded-lg bg-green-600 hover:bg-green-700 text-white transition disabled:opacity-50"
+                    >
+                      {addingModels ? 'Đang thêm...' : 'Thêm tất cả model mới'}
+                    </button>
+                  )}
+                </div>
+              )}
+              {showDiscovered === provider.id && discoveredModels.length === 0 && !fetchingModels && (
+                <div className="mt-3 p-3 bg-gray-900 rounded-lg border border-gray-600 text-sm text-gray-400 text-center">
+                  Không tìm thấy model nào từ API
                 </div>
               )}
             </div>

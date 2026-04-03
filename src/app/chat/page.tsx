@@ -5,7 +5,7 @@ import { useSession, signOut } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import ChatMessage from '@/components/ChatMessage'
 import ChatInput from '@/components/ChatInput'
-import Live2DCharacter from '@/components/Live2DCharacter'
+import Live2DCharacter, { type Live2DCharacterHandle } from '@/components/Live2DCharacter'
 import SettingsPanel from '@/components/SettingsPanel'
 import { useChatStore } from '@/store/chat'
 
@@ -19,21 +19,29 @@ interface Live2DChar {
 }
 
 const BACKGROUNDS = [
-  { id: 'san-truong', src: '/assets/san-truong.png', label: 'Sân trường' },
-  { id: 'bg-default', src: '/assets/bg-default.jpg', label: 'Phòng AI' },
-  { id: 'hoa-phuong', src: '/assets/hoa-phuong.jpg', label: 'Hoa phượng' },
-  { id: 'hoa-sua', src: '/assets/hoa-sua.jpg', label: 'Hoa sữa' },
+  { id: 'cherry-blossom', src: '/assets/backgrounds/cherry-blossom.jpg', label: 'Hoa anh đào' },
+  { id: 'night-city', src: '/assets/backgrounds/night-city.jpg', label: 'Phố đêm Tokyo' },
+  { id: 'mountain-lake', src: '/assets/backgrounds/mountain-lake.jpg', label: 'Núi mây' },
+  { id: 'starry-night', src: '/assets/backgrounds/starry-night.jpg', label: 'Đêm sao' },
+  { id: 'sunset-ocean', src: '/assets/backgrounds/sunset-ocean.jpg', label: 'Hoàng hôn' },
+  { id: 'neon-street', src: '/assets/backgrounds/neon-street.jpg', label: 'Skyline' },
+  { id: 'anime-room', src: '/assets/backgrounds/anime-room.jpg', label: 'Gradient' },
+  { id: 'campus-green', src: '/assets/backgrounds/campus-green.jpg', label: 'Khuôn viên' },
 ]
 
 export default function ChatPage() {
   const { data: session, status } = useSession()
   const router = useRouter()
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const live2dRef = useRef<Live2DCharacterHandle>(null)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [bgIndex, setBgIndex] = useState(0)
   const [showUserMenu, setShowUserMenu] = useState(false)
   const [showBgSelector, setShowBgSelector] = useState(false)
   const [showCharSelector, setShowCharSelector] = useState(false)
+  const [showExprPanel, setShowExprPanel] = useState(false)
+  const [modelExpressions, setModelExpressions] = useState<string[]>([])
+  const [modelMotionGroups, setModelMotionGroups] = useState<{ name: string; count: number }[]>([])
   const [models, setModels] = useState<any[]>([])
   const [characters, setCharacters] = useState<Live2DChar[]>([])
   const [selectedCharUrl, setSelectedCharUrl] = useState<string | undefined>(undefined)
@@ -223,7 +231,126 @@ export default function ChatPage() {
       <div className="scene-background" style={{ backgroundImage: `url(${BACKGROUNDS[bgIndex].src})` }} />
 
       {/* Live2D Character */}
-      <Live2DCharacter key={charKey} modelUrl={selectedCharUrl} />
+      <Live2DCharacter
+        key={charKey}
+        ref={live2dRef}
+        modelUrl={selectedCharUrl}
+        onModelLoaded={(info) => {
+          setModelExpressions(info.expressions)
+          setModelMotionGroups(info.motionGroups)
+        }}
+      />
+
+      {/* Smile / Expression trigger button — always visible */}
+      <button
+        type="button"
+        aria-label="Biểu cảm"
+        onClick={() => setShowExprPanel(p => !p)}
+        style={{
+          position: 'fixed',
+          right: 'calc(var(--chat-panel-width) + 16px)',
+          bottom: 84,
+          zIndex: 35,
+          width: 40,
+          height: 40,
+          borderRadius: 12,
+          border: '1px solid rgba(255,255,255,0.18)',
+          background: showExprPanel ? 'rgba(99,102,241,0.55)' : 'rgba(10,12,22,0.65)',
+          color: '#fff',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          cursor: 'pointer',
+          backdropFilter: 'blur(10px)',
+          boxShadow: showExprPanel ? '0 0 16px rgba(99,102,241,0.5)' : '0 2px 12px rgba(0,0,0,0.4)',
+          transition: 'all 0.15s',
+        }}
+        title="Biểu cảm & Hành động"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="10" />
+          <path d="M8 14s1.5 2 4 2 4-2 4-2" />
+          <line x1="9" x2="9.01" y1="9" y2="9" />
+          <line x1="15" x2="15.01" y1="9" y2="9" />
+        </svg>
+      </button>
+
+      {/* Expression / Preset panel */}
+      {showExprPanel && (
+        <div style={{
+          position: 'fixed',
+          bottom: 134,
+          right: 'calc(var(--chat-panel-width) + 16px)',
+          zIndex: 36,
+          width: 360,
+          maxWidth: 'calc(100vw - var(--chat-panel-width) - var(--toolbar-width) - 24px)',
+          padding: '12px 14px',
+          borderRadius: 14,
+          background: 'rgba(8,10,22,0.90)',
+          backdropFilter: 'blur(16px)',
+          border: '1px solid rgba(255,255,255,0.12)',
+          boxShadow: '0 16px 40px rgba(0,0,0,0.5)',
+        }}>
+          {/* Outfit presets */}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            {(['Bỏ kính', 'Bỏ áo khoác', 'Bỏ áo khoác và kính', 'Nguyên bản'] as const).map((label, i) => {
+              const presets = ['no-glass', 'no-coat', 'no-coat-glass', 'original'] as const
+              return (
+                <button key={label}
+                  onClick={() => live2dRef.current?.triggerOutfitPreset(presets[i])}
+                  style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.14)', background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.9)', cursor: 'pointer', fontSize: 12, fontWeight: 500, transition: 'all 0.15s' }}
+                  onMouseEnter={e => { e.currentTarget.style.background = 'rgba(99,102,241,0.4)'; e.currentTarget.style.borderColor = 'rgba(129,140,248,0.7)' }}
+                  onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.07)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.14)' }}
+                >{label}</button>
+              )
+            })}
+          </div>
+
+          <div style={{ width: '100%', height: 1, background: 'rgba(255,255,255,0.1)', margin: '10px 0' }} />
+
+          {/* Action presets */}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            {(['Thả tim', 'Chào #1', 'Chào #2', 'Tạo dáng'] as const).map((label, i) => {
+              const presets = ['heart', 'greet1', 'greet2', 'pose'] as const
+              return (
+                <button key={label}
+                  onClick={() => live2dRef.current?.triggerActionPreset(presets[i])}
+                  style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.14)', background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.9)', cursor: 'pointer', fontSize: 12, fontWeight: 500, transition: 'all 0.15s' }}
+                  onMouseEnter={e => { e.currentTarget.style.background = 'rgba(99,102,241,0.4)'; e.currentTarget.style.borderColor = 'rgba(129,140,248,0.7)' }}
+                  onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.07)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.14)' }}
+                >{label}</button>
+              )
+            })}
+          </div>
+
+          {/* Model-specific expressions */}
+          {modelExpressions.length > 0 && (
+            <div style={{ marginTop: 10 }}>
+              <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 }}>Biểu cảm</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                <button onClick={() => live2dRef.current?.triggerExpression()} style={{ padding: '3px 10px', borderRadius: 8, border: 'none', background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.7)', cursor: 'pointer', fontSize: 11 }}>🎲 Random</button>
+                {modelExpressions.map((name, i) => (
+                  <button key={i} onClick={() => live2dRef.current?.triggerExpression(i)} style={{ padding: '3px 10px', borderRadius: 8, border: 'none', background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.7)', cursor: 'pointer', fontSize: 11 }}>{name}</button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Model-specific motions */}
+          {modelMotionGroups.length > 0 && (
+            <div style={{ marginTop: 8 }}>
+              <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 }}>Hành động</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                {modelMotionGroups.map(group =>
+                  Array.from({ length: group.count }, (_, i) => (
+                    <button key={`${group.name}-${i}`} onClick={() => live2dRef.current?.triggerMotion(group.name, i)} style={{ padding: '3px 10px', borderRadius: 8, border: 'none', background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.7)', cursor: 'pointer', fontSize: 11 }}>{group.name}{group.count > 1 ? ` ${i + 1}` : ''}</button>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Left Toolbar */}
       <div className="left-toolbar">

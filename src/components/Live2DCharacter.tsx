@@ -1,11 +1,20 @@
 'use client'
 
-import { useEffect, useRef, useState, useCallback } from 'react'
+import { useEffect, useRef, useState, useCallback, forwardRef, useImperativeHandle } from 'react'
 
 interface Live2DCharacterProps {
   modelUrl?: string
   onZoomChange?: (zoom: number) => void
   onModelLoaded?: (info: ModelInfo) => void
+}
+
+export interface Live2DCharacterHandle {
+  triggerOutfitPreset: (preset: 'no-glass' | 'no-coat' | 'no-coat-glass' | 'original') => void
+  triggerActionPreset: (preset: 'heart' | 'greet1' | 'greet2' | 'pose') => void
+  triggerExpression: (index?: number) => void
+  triggerMotion: (group: string, index?: number) => void
+  getExpressions: () => string[]
+  getMotionGroups: () => { name: string; count: number }[]
 }
 
 export interface ModelInfo {
@@ -18,21 +27,78 @@ const DEFAULT_MODEL_URL = '/models/Haru_Greeter/haru_greeter_t03.model3.json'
 const MIN_ZOOM = 0.3
 const MAX_ZOOM = 3.0
 const ZOOM_STEP = 0.1
+const POSITION_STORAGE_KEY = 'ami.live2d.positions.v1'
 
-export default function Live2DCharacter({ modelUrl, onZoomChange, onModelLoaded }: Live2DCharacterProps) {
+const Live2DCharacter = forwardRef<Live2DCharacterHandle, Live2DCharacterProps>(
+function Live2DCharacter({ modelUrl, onZoomChange, onModelLoaded }, ref) {
   const containerRef = useRef<HTMLDivElement>(null)
   const appRef = useRef<any>(null)
   const modelRef = useRef<any>(null)
   const initedRef = useRef(false)
+  const onModelLoadedRef = useRef(onModelLoaded)
   const baseScaleRef = useRef(1)
   const zoomRef = useRef(1)
+  const positionOffsetRef = useRef({ x: 0, y: 0 })
+  const sceneSizeRef = useRef({ w: 0, h: 0 })
+  const dragFrameRef = useRef<number | null>(null)
+  const pendingDragRef = useRef<{ x: number; y: number } | null>(null)
+  const dragRef = useRef({
+    active: false,
+    startX: 0,
+    startY: 0,
+    baseOffsetX: 0,
+    baseOffsetY: 0,
+  })
   const [isLoading, setIsLoading] = useState(true)
   const [loadProgress, setLoadProgress] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [zoom, setZoom] = useState(1)
   const [expressions, setExpressions] = useState<string[]>([])
-  const [motionGroups, setMotionGroups] = useState<{ name: string; count: number }[]>([])
-  const [showMotionPanel, setShowMotionPanel] = useState(false)
+  const [motionGroups, setMotionGroups] = useState<{ name: string; count: number }[]>([])     
+
+  // Keep callback ref in sync without triggering re-init
+  useEffect(() => { onModelLoadedRef.current = onModelLoaded }, [onModelLoaded])
+
+  const applyTransformWithOffset = useCallback((model: any, scale: number) => {
+    if (!containerRef.current) return
+    const w = sceneSizeRef.current.w || containerRef.current.clientWidth
+    const h = sceneSizeRef.current.h || containerRef.current.clientHeight
+    sceneSizeRef.current = { w, h }
+    const origH = model.height / model.scale.y
+    const origW = model.width / model.scale.x
+    model.scale.set(scale)
+    model.x = (w - origW * scale) / 2 + positionOffsetRef.current.x
+    model.y = h - origH * scale + positionOffsetRef.current.y
+  }, [])
+
+  const getModelPositionKey = useCallback(() => modelUrl || DEFAULT_MODEL_URL, [modelUrl])
+
+  const loadSavedPosition = useCallback(() => {
+    try {
+      const raw = localStorage.getItem(POSITION_STORAGE_KEY)
+      if (!raw) return { x: 0, y: 0 }
+      const all = JSON.parse(raw) as Record<string, { x: number; y: number }>
+      const current = all[getModelPositionKey()]
+      if (!current || typeof current.x !== 'number' || typeof current.y !== 'number') {
+        return { x: 0, y: 0 }
+      }
+      return current
+    } catch {
+      return { x: 0, y: 0 }
+    }
+  }, [getModelPositionKey])
+
+  const saveCurrentPosition = useCallback(() => {
+    try {
+      const raw = localStorage.getItem(POSITION_STORAGE_KEY)
+      const all = raw ? (JSON.parse(raw) as Record<string, { x: number; y: number }>) : {}
+      all[getModelPositionKey()] = {
+        x: positionOffsetRef.current.x,
+        y: positionOffsetRef.current.y,
+      }
+      localStorage.setItem(POSITION_STORAGE_KEY, JSON.stringify(all))
+    } catch {}
+  }, [getModelPositionKey])
 
   const applyZoom = useCallback((newZoom: number) => {
     const model = modelRef.current
@@ -41,16 +107,17 @@ export default function Live2DCharacter({ modelUrl, onZoomChange, onModelLoaded 
     zoomRef.current = clamped
     setZoom(clamped)
     onZoomChange?.(clamped)
-
-    const w = containerRef.current.clientWidth
-    const h = containerRef.current.clientHeight
     const scale = baseScaleRef.current * clamped
-    const origH = model.height / model.scale.y
-    const origW = model.width / model.scale.x
-    model.scale.set(scale)
-    model.x = (w - origW * scale) / 2
-    model.y = h - origH * scale
-  }, [onZoomChange])
+    applyTransformWithOffset(model, scale)
+  }, [applyTransformWithOffset, onZoomChange])
+
+  const resetPosition = useCallback(() => {
+    const model = modelRef.current
+    if (!model) return
+    positionOffsetRef.current = { x: 0, y: 0 }
+    applyTransformWithOffset(model, baseScaleRef.current * zoomRef.current)
+    saveCurrentPosition()
+  }, [applyTransformWithOffset, saveCurrentPosition])
 
   const triggerExpression = useCallback((index?: number) => {
     const model = modelRef.current
@@ -64,6 +131,53 @@ export default function Live2DCharacter({ modelUrl, onZoomChange, onModelLoaded 
     if (!model) return
     model.motion(group, index)
   }, [])
+
+  const findExpressionIndex = useCallback((keywords: string[]) => {
+    const normalized = expressions.map(e => e.toLowerCase())
+    return normalized.findIndex(name => keywords.some(k => name.includes(k)))
+  }, [expressions])
+
+  const playPresetMotion = useCallback((keywords: string[], preferredIndex = 0) => {
+    const group = motionGroups.find(g => keywords.some(k => g.name.toLowerCase().includes(k)))
+    if (!group) return false
+    triggerMotion(group.name, Math.min(preferredIndex, Math.max(0, group.count - 1)))
+    return true
+  }, [motionGroups, triggerMotion])
+
+  const triggerOutfitPreset = useCallback((preset: 'no-glass' | 'no-coat' | 'no-coat-glass' | 'original') => {
+    const map: Record<string, string[]> = {
+      'no-glass': ['no glass', 'noglass', 'glass off', 'without glass', 'bo kinh', 'megane', 'glassesoff'],
+      'no-coat': ['no coat', 'without coat', 'coat off', 'bo ao khoac', 'jacket off', 'without jacket'],
+      'no-coat-glass': ['no coat glass', 'without coat glass', 'both off', 'bo ao khoac va kinh', 'jacket and glass'],
+      'original': ['original', 'base', 'default', 'normal', 'nguyen ban'],
+    }
+    const idx = findExpressionIndex(map[preset])
+    if (idx >= 0) {
+      triggerExpression(idx)
+      return
+    }
+    if (preset === 'original') {
+      triggerExpression(0)
+      return
+    }
+    triggerExpression()
+  }, [findExpressionIndex, triggerExpression])
+
+  const triggerActionPreset = useCallback((preset: 'heart' | 'greet1' | 'greet2' | 'pose') => {
+    if (preset === 'heart') {
+      if (!playPresetMotion(['heart', 'love', 'special'], 0)) playPresetMotion(['tap', 'idle'], 0)
+      return
+    }
+    if (preset === 'greet1') {
+      if (!playPresetMotion(['greet', 'hello', 'wave', 'start'], 0)) playPresetMotion(['tap', 'idle'], 0)
+      return
+    }
+    if (preset === 'greet2') {
+      if (!playPresetMotion(['greet', 'hello', 'wave', 'start'], 1)) playPresetMotion(['tap', 'idle'], 1)
+      return
+    }
+    if (!playPresetMotion(['pose', 'special', 'idle'], 0)) playPresetMotion(['tap'], 0)
+  }, [playPresetMotion])
 
   useEffect(() => {
     if (initedRef.current) return
@@ -104,6 +218,7 @@ export default function Live2DCharacter({ modelUrl, onZoomChange, onModelLoaded 
 
         const width = container.clientWidth || window.innerWidth
         const height = container.clientHeight || window.innerHeight
+        sceneSizeRef.current = { w: width, h: height }
 
         setLoadProgress('Đang tạo canvas...')
 
@@ -113,8 +228,9 @@ export default function Live2DCharacter({ modelUrl, onZoomChange, onModelLoaded 
           backgroundAlpha: 0,
           antialias: true,
           resolution: 1,
+          resizeTo: undefined,
         })
-        if (cancelled) { app.destroy(true); return }
+        if (cancelled) { try { app.destroy(true) } catch {} return }
 
         const canvas = app.view as HTMLCanvasElement
         canvas.style.width = '100%'
@@ -133,8 +249,8 @@ export default function Live2DCharacter({ modelUrl, onZoomChange, onModelLoaded 
           autoFocus: true,
           autoUpdate: true,
           ticker: PIXI.Ticker.shared,
-        })
-        if (cancelled) { app.destroy(true); return }
+        } as any)
+        if (cancelled) { try { app.destroy(true) } catch {} return }
         modelRef.current = model
 
         setLoadProgress('Đang render nhân vật...')
@@ -143,9 +259,8 @@ export default function Live2DCharacter({ modelUrl, onZoomChange, onModelLoaded 
         const modelW = model.width
         const scale = Math.min((height * 0.85) / modelH, (width * 0.8) / modelW)
         baseScaleRef.current = scale
-        model.scale.set(scale * zoomRef.current)
-        model.x = (width - modelW * scale * zoomRef.current) / 2
-        model.y = height - modelH * scale * zoomRef.current
+        positionOffsetRef.current = loadSavedPosition()
+        applyTransformWithOffset(model, scale * zoomRef.current)
 
         model.on('hit', (hitAreas: string[]) => {
           if (hitAreas.includes('Body') || hitAreas.includes('body')) {
@@ -158,13 +273,71 @@ export default function Live2DCharacter({ modelUrl, onZoomChange, onModelLoaded 
 
         app.stage.addChild(model)
 
+        // Drag to move model position
+        const onPointerDown = (e: PointerEvent) => {
+          if (!containerRef.current || !modelRef.current) return
+          const rect = containerRef.current.getBoundingClientRect()
+          const x = e.clientX - rect.left
+          const y = e.clientY - rect.top
+          const bounds = modelRef.current.getBounds?.()
+          if (!bounds || !bounds.contains(x, y)) return
+          dragRef.current.active = true
+          dragRef.current.startX = e.clientX
+          dragRef.current.startY = e.clientY
+          dragRef.current.baseOffsetX = positionOffsetRef.current.x
+          dragRef.current.baseOffsetY = positionOffsetRef.current.y
+          canvas.style.cursor = 'grabbing'
+        }
+
+        const onPointerMove = (e: PointerEvent) => {
+          if (!dragRef.current.active || !modelRef.current) return
+          const dx = e.clientX - dragRef.current.startX
+          const dy = e.clientY - dragRef.current.startY
+          pendingDragRef.current = {
+            x: dragRef.current.baseOffsetX + dx,
+            y: dragRef.current.baseOffsetY + dy,
+          }
+
+          if (dragFrameRef.current !== null) return
+          dragFrameRef.current = window.requestAnimationFrame(() => {
+            dragFrameRef.current = null
+            const next = pendingDragRef.current
+            if (!next || !modelRef.current) return
+            positionOffsetRef.current.x = next.x
+            positionOffsetRef.current.y = next.y
+            applyTransformWithOffset(modelRef.current, baseScaleRef.current * zoomRef.current)
+          })
+        }
+
+        const onPointerUp = () => {
+          if (!dragRef.current.active) return
+          dragRef.current.active = false
+          pendingDragRef.current = null
+          if (dragFrameRef.current !== null) {
+            window.cancelAnimationFrame(dragFrameRef.current)
+            dragFrameRef.current = null
+          }
+          canvas.style.cursor = 'default'
+          saveCurrentPosition()
+        }
+
+        canvas.addEventListener('pointerdown', onPointerDown)
+        window.addEventListener('pointermove', onPointerMove)
+        window.addEventListener('pointerup', onPointerUp)
+
+        ;(app as any).__dragCleanup = () => {
+          canvas.removeEventListener('pointerdown', onPointerDown)
+          window.removeEventListener('pointermove', onPointerMove)
+          window.removeEventListener('pointerup', onPointerUp)
+        }
+
         // Extract expressions and motions
         const expNames: string[] = []
         const motGroups: { name: string; count: number }[] = []
         try {
           const internalModel = model.internalModel
           if (internalModel?.settings) {
-            const settings = internalModel.settings
+            const settings = internalModel.settings as any
             if (settings.expressions) {
               settings.expressions.forEach((e: any) => {
                 expNames.push(e.Name || e.name || 'Expression')
@@ -181,7 +354,7 @@ export default function Live2DCharacter({ modelUrl, onZoomChange, onModelLoaded 
         } catch {}
         setExpressions(expNames)
         setMotionGroups(motGroups)
-        onModelLoaded?.({ expressions: expNames, motionGroups: motGroups })
+        onModelLoadedRef.current?.({ expressions: expNames, motionGroups: motGroups })
 
         setIsLoading(false)
         setLoadProgress('')
@@ -200,14 +373,22 @@ export default function Live2DCharacter({ modelUrl, onZoomChange, onModelLoaded 
     return () => {
       cancelled = true
       if (timerId) clearTimeout(timerId)
+      if (dragFrameRef.current !== null) {
+        window.cancelAnimationFrame(dragFrameRef.current)
+        dragFrameRef.current = null
+      }
       if (appRef.current) {
+        const cleanup = (appRef.current as any).__dragCleanup
+        if (cleanup) {
+          try { cleanup() } catch {}
+        }
         try { appRef.current.destroy(true) } catch {}
         appRef.current = null
       }
       modelRef.current = null
       initedRef.current = false
     }
-  }, [modelUrl])
+  }, [applyTransformWithOffset, loadSavedPosition, modelUrl, saveCurrentPosition])
 
   // Resize handler
   useEffect(() => {
@@ -215,6 +396,7 @@ export default function Live2DCharacter({ modelUrl, onZoomChange, onModelLoaded 
       if (!containerRef.current || !appRef.current || !modelRef.current) return
       const w = containerRef.current.clientWidth
       const h = containerRef.current.clientHeight
+      sceneSizeRef.current = { w, h }
       appRef.current.renderer.resize(w, h)
       const model = modelRef.current
       const origH = model.height / model.scale.y
@@ -222,13 +404,11 @@ export default function Live2DCharacter({ modelUrl, onZoomChange, onModelLoaded 
       const newBase = Math.min((h * 0.85) / origH, (w * 0.8) / origW)
       baseScaleRef.current = newBase
       const scale = newBase * zoomRef.current
-      model.scale.set(scale)
-      model.x = (w - origW * scale) / 2
-      model.y = h - origH * scale
+      applyTransformWithOffset(model, scale)
     }
     window.addEventListener('resize', handleResize)
     return () => window.removeEventListener('resize', handleResize)
-  }, [])
+  }, [applyTransformWithOffset])
 
   // Mouse wheel zoom
   useEffect(() => {
@@ -243,13 +423,18 @@ export default function Live2DCharacter({ modelUrl, onZoomChange, onModelLoaded 
     return () => container.removeEventListener('wheel', handleWheel)
   }, [applyZoom])
 
-  const btnStyle: React.CSSProperties = {
-    padding: '3px 10px', borderRadius: 10, border: 'none',
-    background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.75)',
-    cursor: 'pointer', fontSize: 11, transition: 'all 0.15s', whiteSpace: 'nowrap',
-  }
+  useImperativeHandle(ref, () => ({
+    triggerOutfitPreset,
+    triggerActionPreset,
+    triggerExpression,
+    triggerMotion,
+    getExpressions: () => expressions,
+    getMotionGroups: () => motionGroups,
+  }), [triggerOutfitPreset, triggerActionPreset, triggerExpression, triggerMotion, expressions, motionGroups])
 
   return (
+    <>
+    {/* Canvas container - fades in when model loaded */}
     <div
       ref={containerRef}
       style={{
@@ -264,11 +449,15 @@ export default function Live2DCharacter({ modelUrl, onZoomChange, onModelLoaded 
         opacity: isLoading ? 0 : 1,
         transition: 'opacity 0.5s ease-in-out',
       }}
-    >
-      {/* Bottom bar: zoom + actions */}
-      {!isLoading && !error && (
+    />
+
+    {/* UI controls - always visible, separate from canvas opacity */}
+    {/* Bottom bar: zoom + actions */}
+    {!isLoading && !error && (
         <div style={{
-          position: 'absolute', bottom: 16, left: '50%', transform: 'translateX(-50%)',
+          position: 'fixed', bottom: 16,
+          left: 'calc(var(--toolbar-width) + (100vw - var(--toolbar-width) - var(--chat-panel-width)) / 2)',
+          transform: 'translateX(-50%)',
           display: 'flex', alignItems: 'center', gap: 6, zIndex: 10,
           padding: '6px 12px', borderRadius: 20,
           background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(8px)',
@@ -312,81 +501,42 @@ export default function Live2DCharacter({ modelUrl, onZoomChange, onModelLoaded 
             onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.1)')}
             title="Reset zoom"
           >Reset</button>
+          <button
+            onClick={resetPosition}
+            style={{
+              padding: '2px 8px', borderRadius: 12, border: 'none',
+              background: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.6)',
+              cursor: 'pointer', fontSize: 11, transition: 'background 0.15s',
+            }}
+            onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.2)')}
+            onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.1)')}
+            title="Reset vị trí"
+          >Vị trí</button>
 
-          {(expressions.length > 0 || motionGroups.length > 0) && (
-            <>
-              <div style={{ width: 1, height: 18, background: 'rgba(255,255,255,0.15)', margin: '0 2px' }} />
-              <button
-                onClick={() => setShowMotionPanel(p => !p)}
-                style={{
-                  padding: '2px 10px', borderRadius: 12, border: 'none',
-                  background: showMotionPanel ? 'rgba(99,102,241,0.4)' : 'rgba(255,255,255,0.1)',
-                  color: 'rgba(255,255,255,0.8)', cursor: 'pointer', fontSize: 13,
-                  transition: 'background 0.15s',
-                }}
-                onMouseEnter={e => (e.currentTarget.style.background = showMotionPanel ? 'rgba(99,102,241,0.5)' : 'rgba(255,255,255,0.2)')}
-                onMouseLeave={e => (e.currentTarget.style.background = showMotionPanel ? 'rgba(99,102,241,0.4)' : 'rgba(255,255,255,0.1)')}
-                title="Biểu cảm & Hành động"
-              >🎭</button>
-            </>
-          )}
         </div>
       )}
 
-      {/* Expression/Motion panel */}
-      {showMotionPanel && !isLoading && (
+      {!isLoading && !error && (
         <div style={{
-          position: 'absolute', bottom: 60, left: '50%', transform: 'translateX(-50%)',
-          zIndex: 11, padding: '10px 14px', borderRadius: 14,
-          background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(12px)',
-          border: '1px solid rgba(255,255,255,0.1)',
-          maxHeight: 280, overflowY: 'auto', minWidth: 200, maxWidth: 360,
+          position: 'fixed', top: 12,
+          left: 'calc(var(--toolbar-width) + (100vw - var(--toolbar-width) - var(--chat-panel-width)) / 2)',
+          transform: 'translateX(-50%)',
+          padding: '4px 10px', borderRadius: 999,
+          background: 'rgba(0,0,0,0.35)', border: '1px solid rgba(255,255,255,0.12)',
+          color: 'rgba(255,255,255,0.65)', fontSize: 11, zIndex: 8,
+          userSelect: 'none',
         }}>
-          {expressions.length > 0 && (
-            <div style={{ marginBottom: motionGroups.length > 0 ? 10 : 0 }}>
-              <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 }}>
-                Biểu cảm
-              </div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-                <button onClick={() => triggerExpression()} style={btnStyle}
-                  onMouseEnter={e => { e.currentTarget.style.background = 'rgba(99,102,241,0.4)'; e.currentTarget.style.color = '#fff' }}
-                  onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; e.currentTarget.style.color = 'rgba(255,255,255,0.75)' }}
-                >🎲 Random</button>
-                {expressions.map((name, i) => (
-                  <button key={i} onClick={() => triggerExpression(i)} style={btnStyle}
-                    onMouseEnter={e => { e.currentTarget.style.background = 'rgba(99,102,241,0.4)'; e.currentTarget.style.color = '#fff' }}
-                    onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; e.currentTarget.style.color = 'rgba(255,255,255,0.75)' }}
-                  >{name}</button>
-                ))}
-              </div>
-            </div>
-          )}
-          {motionGroups.length > 0 && (
-            <div>
-              <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 }}>
-                Hành động
-              </div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-                {motionGroups.map(group => (
-                  <div key={group.name} style={{ display: 'contents' }}>
-                    {Array.from({ length: group.count }, (_, i) => (
-                      <button key={`${group.name}-${i}`} onClick={() => triggerMotion(group.name, i)} style={btnStyle}
-                        onMouseEnter={e => { e.currentTarget.style.background = 'rgba(99,102,241,0.4)'; e.currentTarget.style.color = '#fff' }}
-                        onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; e.currentTarget.style.color = 'rgba(255,255,255,0.75)' }}
-                      >{group.name}{group.count > 1 ? ` ${i + 1}` : ''}</button>
-                    ))}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+          Giữ và kéo nhân vật để di chuyển
         </div>
       )}
 
       {/* Enhanced loading overlay */}
       {isLoading && (
         <div style={{
-          position: 'absolute', inset: 0,
+          position: 'fixed',
+          top: 0, bottom: 0,
+          left: 'var(--toolbar-width)',
+          right: 'var(--chat-panel-width)',
           display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
           gap: 16,
         }}>
@@ -422,7 +572,9 @@ export default function Live2DCharacter({ modelUrl, onZoomChange, onModelLoaded 
       {/* Error display */}
       {error && (
         <div style={{
-          position: 'absolute', bottom: 16, left: '50%', transform: 'translateX(-50%)',
+          position: 'fixed', bottom: 16,
+          left: 'calc(var(--toolbar-width) + (100vw - var(--toolbar-width) - var(--chat-panel-width)) / 2)',
+          transform: 'translateX(-50%)',
           padding: '8px 16px', borderRadius: 12,
           background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.25)',
           backdropFilter: 'blur(8px)',
@@ -433,6 +585,8 @@ export default function Live2DCharacter({ modelUrl, onZoomChange, onModelLoaded 
           Không thể tải Live2D: {error}
         </div>
       )}
-    </div>
+    </>
   )
-}
+})
+
+export default Live2DCharacter

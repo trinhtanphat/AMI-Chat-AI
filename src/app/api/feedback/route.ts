@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
 import fs from 'fs'
 import path from 'path'
 
 export async function POST(req: Request) {
   try {
-    const session = await getServerSession()
+    const session = await getServerSession(authOptions)
     const body = await req.json()
     const { name, email, message } = body
 
