@@ -1,0 +1,86 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String         @id @default(cuid())
+  email         String         @unique
+  name          String
+  password      String
+  role          String         @default("user") // "user" | "admin"
+  avatar        String?
+  isActive      Boolean        @default(true)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  conversations Conversation[]
+  messages      Message[]
+}
+
+model Conversation {
+  id        String    @id @default(cuid())
+  title     String    @default("New Chat")
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  modelId   String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  messages  Message[]
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  role           String // "user" | "assistant" | "system"
+  content        String
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  userId         String?
+  user           User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+  createdAt      DateTime     @default(now())
+}
+
+model AiProvider {
+  id        String    @id @default(cuid())
+  name      String
+  baseUrl   String
+  apiKey    String
+  isActive  Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  models    AiModel[]
+}
+
+model AiModel {
+  id         String     @id @default(cuid())
+  name       String
+  modelId    String // actual model identifier e.g. "gpt-4o"
+  providerId String
+  provider   AiProvider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  isActive   Boolean    @default(true)
+  isDefault  Boolean    @default(false)
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+}
+
+model SystemSetting {
+  id    String @id @default(cuid())
+  key   String @unique
+  value String
+}
+
+model Live2DCharacter {
+  id        String  @id @default(cuid())
+  name      String
+  modelUrl  String
+  thumbnail String?
+  category  String  @default("default") // "default" | "anime" | "chibi" | "mascot"
+  isActive  Boolean @default(true)
+  isDefault Boolean @default(false)
+  sortOrder Int     @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
