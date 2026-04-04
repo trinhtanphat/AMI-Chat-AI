@@ -1,9 +1,13 @@
 'use client'
 
 import { useEffect, useRef, useState, forwardRef, useImperativeHandle } from 'react'
+import type { LipsyncState } from '@/lib/lipsync'
 
 export interface VRMCharacterHandle {
   triggerEmotion: (emotion: string) => void
+  updateLipsync: (state: LipsyncState) => void
+  startLipsync: (audio: HTMLAudioElement) => void
+  stopLipsync: () => void
 }
 
 interface VRMCharacterProps {
@@ -23,6 +27,8 @@ const VRMCharacter = forwardRef<VRMCharacterHandle, VRMCharacterProps>(
     const mixerRef = useRef<any>(null)
     const animFrameRef = useRef<number>(0)
     const onModelLoadedRef = useRef(onModelLoaded)
+    const lipsyncEngineRef = useRef<any>(null)
+    const glbModelRef = useRef<any>(null)
     const [isLoading, setIsLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [loadProgress, setLoadProgress] = useState('')
@@ -45,7 +51,96 @@ const VRMCharacter = forwardRef<VRMCharacterHandle, VRMCharacterProps>(
         const expr = map[emotion.toLowerCase()] || emotion
         vrm.expressionManager.setValue(expr, 1)
       },
+      updateLipsync: (state: LipsyncState) => {
+        const vrm = vrmRef.current
+        if (vrm?.expressionManager) {
+          // VRM viseme mapping: aa→aa, ih→ih, ou→ou, ee→ee, oh→oh
+          vrm.expressionManager.setValue('aa', state.values.aa)
+          vrm.expressionManager.setValue('ih', state.values.ih)
+          vrm.expressionManager.setValue('ou', state.values.ou)
+          vrm.expressionManager.setValue('ee', state.values.ee)
+          vrm.expressionManager.setValue('oh', state.values.oh)
+        } else {
+          // GLB: animate jaw bone or morph targets
+          applyGLBLipsync(state)
+        }
+      },
+      startLipsync: (audio: HTMLAudioElement) => {
+        import('@/lib/lipsync').then(({ getLipsyncEngine }) => {
+          const engine = getLipsyncEngine()
+          lipsyncEngineRef.current = engine
+          engine.setUpdateCallback((state: LipsyncState) => {
+            const vrm = vrmRef.current
+            if (vrm?.expressionManager) {
+              vrm.expressionManager.setValue('aa', state.values.aa)
+              vrm.expressionManager.setValue('ih', state.values.ih)
+              vrm.expressionManager.setValue('ou', state.values.ou)
+              vrm.expressionManager.setValue('ee', state.values.ee)
+              vrm.expressionManager.setValue('oh', state.values.oh)
+            } else {
+              applyGLBLipsync(state)
+            }
+          })
+          engine.connectAudio(audio)
+        })
+      },
+      stopLipsync: () => {
+        lipsyncEngineRef.current?.disconnect()
+      },
     }))
+
+    // Apply lipsync to GLB models (jaw bone or scale-based mouth animation)
+    const applyGLBLipsync = (state: LipsyncState) => {
+      const model = glbModelRef.current
+      if (!model) return
+
+      // Try to find jaw bone
+      let jawBone: any = null
+      model.traverse?.((node: any) => {
+        if (node.isBone) {
+          const name = node.name.toLowerCase()
+          if (name.includes('jaw') || name.includes('chin') || name.includes('mouth')) {
+            jawBone = node
+          }
+        }
+      })
+
+      if (jawBone) {
+        // Rotate jaw bone to simulate mouth opening
+        jawBone.rotation.x = state.mouthOpen * 0.3
+        return
+      }
+
+      // Fallback: try morph targets on mesh
+      model.traverse?.((node: any) => {
+        if (node.isMesh && node.morphTargetInfluences && node.morphTargetDictionary) {
+          const dict = node.morphTargetDictionary
+          // Try common morph target names
+          const mouthTargets = ['mouthOpen', 'jawOpen', 'mouth_open', 'viseme_aa', 'Mouth_Open']
+          for (const name of mouthTargets) {
+            if (dict[name] !== undefined) {
+              node.morphTargetInfluences[dict[name]] = state.mouthOpen
+              return
+            }
+          }
+          // Try VRM-style viseme morph targets
+          const visemeMap: Record<string, string[]> = {
+            aa: ['viseme_aa', 'A', 'vrc.v_aa'],
+            ih: ['viseme_I', 'I', 'vrc.v_ih'],
+            ou: ['viseme_U', 'U', 'vrc.v_ou'],
+            ee: ['viseme_E', 'E', 'vrc.v_ee'],
+            oh: ['viseme_O', 'O', 'vrc.v_oh'],
+          }
+          for (const [key, names] of Object.entries(visemeMap)) {
+            for (const name of names) {
+              if (dict[name] !== undefined) {
+                node.morphTargetInfluences[dict[name]] = state.values[key as keyof typeof state.values]
+              }
+            }
+          }
+        }
+      })
+    }
 
     useEffect(() => {
       if (!containerRef.current) return
@@ -140,6 +235,7 @@ const VRMCharacter = forwardRef<VRMCharacterHandle, VRMCharacterProps>(
           if (isGLB) {
             // GLB model: plain glTF scene
             const model = gltf.scene
+            glbModelRef.current = model
             // Auto-center and scale the model
             const box = new THREE.Box3().setFromObject(model)
             const size = new THREE.Vector3()
@@ -240,6 +336,7 @@ const VRMCharacter = forwardRef<VRMCharacterHandle, VRMCharacterProps>(
       return () => {
         cancelled = true
         if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current)
+        lipsyncEngineRef.current?.disconnect()
         const container = containerRef.current
         if (container) {
           (container as any).__resizeCleanup?.()

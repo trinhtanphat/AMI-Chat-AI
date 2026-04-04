@@ -56,11 +56,14 @@ export default function ChatMessage({ role, content, isStreaming }: ChatMessageP
       const url = URL.createObjectURL(blob)
       const audio = new Audio(url)
       audioRef.current = audio
+      ;(window as any).__startLipsync?.(audio)
       audio.onended = () => {
+        ;(window as any).__stopLipsync?.()
         setPlaying(false)
         URL.revokeObjectURL(url)
       }
       audio.onerror = () => {
+        ;(window as any).__stopLipsync?.()
         setPlaying(false)
         URL.revokeObjectURL(url)
         fallbackSpeak(content)
@@ -91,8 +94,16 @@ export default function ChatMessage({ role, content, isStreaming }: ChatMessageP
       v.name.toLowerCase().includes('female')
     )
     if (preferred) utterance.voice = preferred
-    utterance.onend = () => setPlaying(false)
-    utterance.onerror = () => setPlaying(false)
+    // Connect speech synthesis lipsync
+    if ((window as any).__updateLipsync) {
+      import('@/lib/lipsync').then(({ getLipsyncEngine }) => {
+        const engine = getLipsyncEngine()
+        engine.setUpdateCallback((state: any) => { (window as any).__updateLipsync?.(state) })
+        engine.connectSpeechSynthesis(utterance, text)
+      })
+    }
+    utterance.onend = () => { ;(window as any).__stopLipsync?.(); setPlaying(false) }
+    utterance.onerror = () => { ;(window as any).__stopLipsync?.(); setPlaying(false) }
     window.speechSynthesis.speak(utterance)
   }
 

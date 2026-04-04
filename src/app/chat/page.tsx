@@ -83,6 +83,18 @@ export default function ChatPage() {
     if (status === 'unauthenticated') router.push('/login')
   }, [status, router])
 
+  // Expose lipsync controls for ChatMessage component
+  useEffect(() => {
+    (window as any).__startLipsync = (audio: HTMLAudioElement) => vrmRef.current?.startLipsync(audio);
+    (window as any).__stopLipsync = () => vrmRef.current?.stopLipsync();
+    (window as any).__updateLipsync = (state: any) => vrmRef.current?.updateLipsync(state);
+    return () => {
+      delete (window as any).__startLipsync;
+      delete (window as any).__stopLipsync;
+      delete (window as any).__updateLipsync;
+    }
+  }, [])
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, streamingContent])
@@ -168,8 +180,9 @@ export default function ChatPage() {
         const blob = await res.blob()
         const url = URL.createObjectURL(blob)
         const audio = new Audio(url)
-        audio.onended = () => { URL.revokeObjectURL(url); restartListening() }
-        audio.onerror = () => { URL.revokeObjectURL(url); browserTTSFallback(text, restartListening) }
+        vrmRef.current?.startLipsync(audio)
+        audio.onended = () => { vrmRef.current?.stopLipsync(); URL.revokeObjectURL(url); restartListening() }
+        audio.onerror = () => { vrmRef.current?.stopLipsync(); URL.revokeObjectURL(url); browserTTSFallback(text, restartListening) }
         audio.play()
         return
       }
@@ -187,8 +200,16 @@ export default function ChatPage() {
     const voices = window.speechSynthesis.getVoices()
     const preferred = voices.find(v => v.lang.startsWith('vi')) || voices.find(v => v.name.toLowerCase().includes('female'))
     if (preferred) utterance.voice = preferred
-    utterance.onend = () => onDone()
-    utterance.onerror = () => onDone()
+    // Connect speech synthesis lipsync
+    if (vrmRef.current) {
+      import('@/lib/lipsync').then(({ getLipsyncEngine }) => {
+        const engine = getLipsyncEngine()
+        engine.setUpdateCallback((state) => { vrmRef.current?.updateLipsync(state) })
+        engine.connectSpeechSynthesis(utterance, text.slice(0, 2000))
+      })
+    }
+    utterance.onend = () => { vrmRef.current?.stopLipsync(); onDone() }
+    utterance.onerror = () => { vrmRef.current?.stopLipsync(); onDone() }
     window.speechSynthesis.speak(utterance)
   }
 
