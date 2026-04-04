@@ -52,6 +52,7 @@ export default function ChatPage() {
   const [showSettings, setShowSettings] = useState(false)
   const [followCursor, setFollowCursor] = useState(true)
   const [scrollZoom, setScrollZoom] = useState(true)
+  const [charSearch, setCharSearch] = useState('')
   const {
     messages,
     currentConversationId,
@@ -118,6 +119,7 @@ export default function ChatPage() {
     setSelectedCharUrl(char.modelUrl)
     setCharKey(prev => prev + 1)
     setShowCharSelector(false)
+    setCharSearch('')
   }
 
   const selectConversation = useCallback(async (id: string) => {
@@ -359,63 +361,90 @@ export default function ChatPage() {
           border: '1px solid rgba(255,255,255,0.12)',
           boxShadow: '0 16px 40px rgba(0,0,0,0.5)',
         }}>
-          {/* Outfit presets */}
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-            {(['Bỏ kính', 'Bỏ áo khoác', 'Bỏ áo khoác và kính', 'Nguyên bản'] as const).map((label, i) => {
-              const presets = ['no-glass', 'no-coat', 'no-coat-glass', 'original'] as const
-              return (
-                <button key={label}
-                  onClick={() => live2dRef.current?.triggerOutfitPreset(presets[i])}
-                  style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.14)', background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.9)', cursor: 'pointer', fontSize: 12, fontWeight: 500, transition: 'all 0.15s' }}
-                  onMouseEnter={e => { e.currentTarget.style.background = 'rgba(99,102,241,0.4)'; e.currentTarget.style.borderColor = 'rgba(129,140,248,0.7)' }}
-                  onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.07)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.14)' }}
-                >{label}</button>
-              )
-            })}
-          </div>
-
-          <div style={{ width: '100%', height: 1, background: 'rgba(255,255,255,0.1)', margin: '10px 0' }} />
-
-          {/* Action presets */}
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-            {(['Thả tim', 'Chào #1', 'Chào #2', 'Tạo dáng'] as const).map((label, i) => {
-              const presets = ['heart', 'greet1', 'greet2', 'pose'] as const
-              return (
-                <button key={label}
-                  onClick={() => live2dRef.current?.triggerActionPreset(presets[i])}
-                  style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.14)', background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.9)', cursor: 'pointer', fontSize: 12, fontWeight: 500, transition: 'all 0.15s' }}
-                  onMouseEnter={e => { e.currentTarget.style.background = 'rgba(99,102,241,0.4)'; e.currentTarget.style.borderColor = 'rgba(129,140,248,0.7)' }}
-                  onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.07)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.14)' }}
-                >{label}</button>
-              )
-            })}
-          </div>
-
-          {/* Model-specific expressions */}
-          {modelExpressions.length > 0 && (
-            <div style={{ marginTop: 10 }}>
-              <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 }}>Biểu cảm</div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-                <button onClick={() => live2dRef.current?.triggerExpression()} style={{ padding: '3px 10px', borderRadius: 8, border: 'none', background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.7)', cursor: 'pointer', fontSize: 11 }}>🎲 Random</button>
-                {modelExpressions.map((name, i) => (
-                  <button key={i} onClick={() => live2dRef.current?.triggerExpression(i)} style={{ padding: '3px 10px', borderRadius: 8, border: 'none', background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.7)', cursor: 'pointer', fontSize: 11 }}>{name}</button>
+          {isVRM ? (
+            <>
+              {/* VRM Emotion controls */}
+              <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>Biểu cảm 3D</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                {[
+                  { label: '😊 Vui', emotion: 'happy' },
+                  { label: '😢 Buồn', emotion: 'sad' },
+                  { label: '😠 Giận', emotion: 'angry' },
+                  { label: '😲 Ngạc nhiên', emotion: 'surprised' },
+                  { label: '😌 Thư giãn', emotion: 'relaxed' },
+                  { label: '😐 Bình thường', emotion: 'neutral' },
+                  { label: '🎉 Vui vẻ', emotion: 'fun' },
+                ].map(({ label, emotion }) => (
+                  <button key={emotion}
+                    onClick={() => vrmRef.current?.triggerEmotion(emotion)}
+                    style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.14)', background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.9)', cursor: 'pointer', fontSize: 12, fontWeight: 500, transition: 'all 0.15s' }}
+                    onMouseEnter={e => { e.currentTarget.style.background = 'rgba(99,102,241,0.4)'; e.currentTarget.style.borderColor = 'rgba(129,140,248,0.7)' }}
+                    onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.07)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.14)' }}
+                  >{label}</button>
                 ))}
               </div>
-            </div>
-          )}
-
-          {/* Model-specific motions */}
-          {modelMotionGroups.length > 0 && (
-            <div style={{ marginTop: 8 }}>
-              <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 }}>Hành động</div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-                {modelMotionGroups.map(group =>
-                  Array.from({ length: group.count }, (_, i) => (
-                    <button key={`${group.name}-${i}`} onClick={() => live2dRef.current?.triggerMotion(group.name, i)} style={{ padding: '3px 10px', borderRadius: 8, border: 'none', background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.7)', cursor: 'pointer', fontSize: 11 }}>{group.name}{group.count > 1 ? ` ${i + 1}` : ''}</button>
-                  ))
-                )}
+            </>
+          ) : (
+            <>
+              {/* Outfit presets */}
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                {(['Bỏ kính', 'Bỏ áo khoác', 'Bỏ áo khoác và kính', 'Nguyên bản'] as const).map((label, i) => {
+                  const presets = ['no-glass', 'no-coat', 'no-coat-glass', 'original'] as const
+                  return (
+                    <button key={label}
+                      onClick={() => live2dRef.current?.triggerOutfitPreset(presets[i])}
+                      style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.14)', background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.9)', cursor: 'pointer', fontSize: 12, fontWeight: 500, transition: 'all 0.15s' }}
+                      onMouseEnter={e => { e.currentTarget.style.background = 'rgba(99,102,241,0.4)'; e.currentTarget.style.borderColor = 'rgba(129,140,248,0.7)' }}
+                      onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.07)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.14)' }}
+                    >{label}</button>
+                  )
+                })}
               </div>
-            </div>
+
+              <div style={{ width: '100%', height: 1, background: 'rgba(255,255,255,0.1)', margin: '10px 0' }} />
+
+              {/* Action presets */}
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                {(['Thả tim', 'Chào #1', 'Chào #2', 'Tạo dáng'] as const).map((label, i) => {
+                  const presets = ['heart', 'greet1', 'greet2', 'pose'] as const
+                  return (
+                    <button key={label}
+                      onClick={() => live2dRef.current?.triggerActionPreset(presets[i])}
+                      style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.14)', background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.9)', cursor: 'pointer', fontSize: 12, fontWeight: 500, transition: 'all 0.15s' }}
+                      onMouseEnter={e => { e.currentTarget.style.background = 'rgba(99,102,241,0.4)'; e.currentTarget.style.borderColor = 'rgba(129,140,248,0.7)' }}
+                      onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.07)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.14)' }}
+                    >{label}</button>
+                  )
+                })}
+              </div>
+
+              {/* Model-specific expressions */}
+              {modelExpressions.length > 0 && (
+                <div style={{ marginTop: 10 }}>
+                  <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 }}>Biểu cảm</div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                    <button onClick={() => live2dRef.current?.triggerExpression()} style={{ padding: '3px 10px', borderRadius: 8, border: 'none', background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.7)', cursor: 'pointer', fontSize: 11 }}>🎲 Random</button>
+                    {modelExpressions.map((name, i) => (
+                      <button key={i} onClick={() => live2dRef.current?.triggerExpression(i)} style={{ padding: '3px 10px', borderRadius: 8, border: 'none', background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.7)', cursor: 'pointer', fontSize: 11 }}>{name}</button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Model-specific motions */}
+              {modelMotionGroups.length > 0 && (
+                <div style={{ marginTop: 8 }}>
+                  <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 }}>Hành động</div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                    {modelMotionGroups.map(group =>
+                      Array.from({ length: group.count }, (_, i) => (
+                        <button key={`${group.name}-${i}`} onClick={() => live2dRef.current?.triggerMotion(group.name, i)} style={{ padding: '3px 10px', borderRadius: 8, border: 'none', background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.7)', cursor: 'pointer', fontSize: 11 }}>{group.name}{group.count > 1 ? ` ${i + 1}` : ''}</button>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
       )}
@@ -530,13 +559,27 @@ export default function ChatPage() {
       {/* Character Selector */}
       {showCharSelector && characters.length > 0 && (
         <>
-          <div style={{ position: 'fixed', inset: 0, zIndex: 24 }} onClick={() => setShowCharSelector(false)} />
+          <div style={{ position: 'fixed', inset: 0, zIndex: 24 }} onClick={() => { setShowCharSelector(false); setCharSearch('') }} />
           <div className="char-selector animate-fade-in">
-            <div style={{ padding: '10px 14px', borderBottom: '1px solid rgba(255,255,255,0.08)', fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.8)' }}>
-              Chọn nhân vật
+            <div style={{ padding: '10px 14px', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.8)', marginBottom: 8 }}>Chọn nhân vật</div>
+              <input
+                type="text"
+                value={charSearch}
+                onChange={(e) => setCharSearch(e.target.value)}
+                placeholder="Tìm kiếm nhân vật..."
+                autoFocus
+                style={{
+                  width: '100%', padding: '6px 10px', fontSize: 12, borderRadius: 8,
+                  border: '1px solid rgba(255,255,255,0.15)', background: 'rgba(255,255,255,0.08)',
+                  color: '#fff', outline: 'none',
+                }}
+              />
             </div>
             <div className="char-grid">
-              {characters.map((char) => (
+              {characters
+                .filter(c => !charSearch || c.name.toLowerCase().includes(charSearch.toLowerCase()) || c.category.toLowerCase().includes(charSearch.toLowerCase()))
+                .map((char) => (
                 <button
                   key={char.id}
                   className={`char-card ${selectedCharUrl === char.modelUrl ? 'active' : ''}`}
@@ -551,7 +594,11 @@ export default function ChatPage() {
                     )}
                   </div>
                   <span className="char-card-name">{char.name}</span>
-                  {char.modelUrl.endsWith('.vrm') && <span className="char-card-badge" style={{ background: 'rgba(99,102,241,0.3)', color: '#a5b4fc' }}>3D</span>}
+                  {char.modelUrl.endsWith('.vrm') ? (
+                    <span className="char-card-badge" style={{ background: 'rgba(99,102,241,0.3)', color: '#a5b4fc' }}>3D</span>
+                  ) : (
+                    <span className="char-card-badge" style={{ background: 'rgba(16,185,129,0.25)', color: '#6ee7b7' }}>2D</span>
+                  )}
                   {char.isDefault && <span className="char-card-badge">★</span>}
                 </button>
               ))}

@@ -21,9 +21,12 @@ const VRMCharacter = forwardRef<VRMCharacterHandle, VRMCharacterProps>(
     const clockRef = useRef<any>(null)
     const mixerRef = useRef<any>(null)
     const animFrameRef = useRef<number>(0)
+    const onModelLoadedRef = useRef(onModelLoaded)
     const [isLoading, setIsLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [loadProgress, setLoadProgress] = useState('')
+
+    onModelLoadedRef.current = onModelLoaded
 
     useImperativeHandle(ref, () => ({
       triggerEmotion: (emotion: string) => {
@@ -124,7 +127,7 @@ const VRMCharacter = forwardRef<VRMCharacterHandle, VRMCharacterProps>(
 
           setIsLoading(false)
           setLoadProgress('')
-          onModelLoaded?.()
+          onModelLoadedRef.current?.()
 
           // Animate
           const animate = () => {
@@ -183,7 +186,7 @@ const VRMCharacter = forwardRef<VRMCharacterHandle, VRMCharacterProps>(
         rendererRef.current?.dispose()
         rendererRef.current?.domElement?.remove()
       }
-    }, [modelUrl, onModelLoaded])
+    }, [modelUrl])
 
     return (
       <div
