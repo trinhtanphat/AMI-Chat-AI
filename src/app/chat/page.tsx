@@ -71,6 +71,13 @@ export default function ChatPage() {
   } = useChatStore()
 
   useEffect(() => {
+    fetch('/api/settings').then(r => r.ok ? r.json() : {}).then((s: Record<string, string>) => {
+      if (s.auto_voice_enabled === 'true') useChatStore.getState().setAutoVoiceMode(true)
+      if (s.auto_voice_delay) useChatStore.getState().setAutoVoiceDelay(Number(s.auto_voice_delay) || 3)
+    }).catch(() => {})
+  }, [])
+
+  useEffect(() => {
     if (status === 'unauthenticated') router.push('/login')
   }, [status, router])
 

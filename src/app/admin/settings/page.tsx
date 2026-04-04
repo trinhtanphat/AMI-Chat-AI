@@ -189,6 +189,48 @@ export default function AdminSettingsPage() {
           </div>
         </div>
 
+        {/* Auto Voice Mode */}
+        <div className="bg-gray-800 rounded-xl border border-gray-700 p-6">
+          <h2 className="text-lg font-semibold text-white mb-1">Chế độ tự động trả lời</h2>
+          <p className="text-xs text-gray-400 mb-4">Sau khi người dùng nói xong và im lặng, AI sẽ tự động gửi tin nhắn sau thời gian chờ.</p>
+          <div className="space-y-4">
+            <label className="flex items-center gap-3 cursor-pointer">
+              <div
+                onClick={() => updateSetting('auto_voice_enabled', settings.auto_voice_enabled === 'true' ? 'false' : 'true')}
+                className={`relative w-11 h-6 rounded-full transition cursor-pointer ${
+                  settings.auto_voice_enabled === 'true' ? 'bg-blue-600' : 'bg-gray-600'
+                }`}
+              >
+                <div
+                  className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${
+                    settings.auto_voice_enabled === 'true' ? 'translate-x-5' : ''
+                  }`}
+                />
+              </div>
+              <span className="text-sm text-gray-300">Bật chế độ tự động trả lời (Auto-voice)</span>
+            </label>
+            <div>
+              <label className="block text-sm text-gray-300 mb-1">
+                Thời gian chờ im lặng ({settings.auto_voice_delay || '3'} giây)
+              </label>
+              <input
+                type="range"
+                min="1"
+                max="10"
+                step="1"
+                value={settings.auto_voice_delay || '3'}
+                onChange={(e) => updateSetting('auto_voice_delay', e.target.value)}
+                className="w-full accent-blue-500"
+              />
+              <div className="flex justify-between text-xs text-gray-500">
+                <span>1s (nhanh)</span>
+                <span>3s</span>
+                <span>10s (chậm)</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Registration */}
         <div className="bg-gray-800 rounded-xl border border-gray-700 p-6">
           <h2 className="text-lg font-semibold text-white mb-4">Đăng ký</h2>

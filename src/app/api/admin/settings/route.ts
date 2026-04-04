@@ -13,6 +13,8 @@ const ALLOWED_SETTINGS = new Set([
   'tts_model',
   'tts_voice',
   'tts_speed',
+  'auto_voice_enabled',
+  'auto_voice_delay',
 ])
 const MAX_VALUE_LENGTH = 5000
 
