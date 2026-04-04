@@ -124,11 +124,21 @@ async function main() {
       { name: 'Sendagaya Shino (3D)', modelUrl: '/models/3d/Sendagaya_Shino.vrm', category: '3d', sortOrder: 50 },
       { name: 'Vita (3D)', modelUrl: '/models/3d/Vita.vrm', category: '3d', sortOrder: 51 },
       { name: 'Sakurada Fumiriya (3D)', modelUrl: '/models/3d/Sakurada_Fumiriya.vrm', category: '3d', sortOrder: 52 },
+      // === GLB 3D Models ===
+      { name: 'Robot Expressive (GLB)', modelUrl: '/models/3d/RobotExpressive.glb', category: '3d', sortOrder: 53 },
+      { name: 'Soldier (GLB)', modelUrl: '/models/3d/Soldier.glb', category: '3d', sortOrder: 54 },
+      { name: 'Xbot (GLB)', modelUrl: '/models/3d/Xbot.glb', category: '3d', sortOrder: 55 },
+      { name: 'Michelle (GLB)', modelUrl: '/models/3d/Michelle.glb', category: '3d', sortOrder: 56 },
+      { name: 'Facecap (GLB)', modelUrl: '/models/3d/Facecap.glb', category: '3d', sortOrder: 57 },
+      { name: 'Horse (GLB)', modelUrl: '/models/3d/Horse.glb', category: '3d', sortOrder: 58 },
+      { name: 'Parrot (GLB)', modelUrl: '/models/3d/Parrot.glb', category: '3d', sortOrder: 59 },
+      { name: 'Flamingo (GLB)', modelUrl: '/models/3d/Flamingo.glb', category: '3d', sortOrder: 60 },
+      { name: 'Stork (GLB)', modelUrl: '/models/3d/Stork.glb', category: '3d', sortOrder: 61 },
       // Ren is inactive (moc3 v6, needs Cubism SDK 5.x)
       { name: 'Ren (SDK5)', modelUrl: '/models/Ren/Ren.model3.json', category: 'anime', isActive: false, sortOrder: 99 },
     ],
   })
-  console.log('Live2D characters seeded (49 active + 1 inactive)')
+  console.log('Live2D characters seeded (58 active + 1 inactive)')
 }
 
 main()

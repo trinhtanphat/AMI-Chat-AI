@@ -109,10 +109,15 @@ const VRMCharacter = forwardRef<VRMCharacterHandle, VRMCharacterProps>(
           const clock = new THREE.Clock()
           clockRef.current = clock
 
-          // Load VRM
+          // Load model (VRM or GLB)
           setLoadProgress('Đang tải mô hình 3D...')
           const loader = new GLTFLoader()
-          loader.register((parser: any) => new VRMLoaderPlugin(parser))
+          const isGLB = modelUrl.toLowerCase().endsWith('.glb')
+
+          // Only register VRM plugin for .vrm files
+          if (!isGLB) {
+            loader.register((parser: any) => new VRMLoaderPlugin(parser))
+          }
 
           const gltf = await loader.loadAsync(modelUrl, (progress) => {
             if (progress.total > 0) {
@@ -123,20 +128,58 @@ const VRMCharacter = forwardRef<VRMCharacterHandle, VRMCharacterProps>(
 
           if (cancelled) return
 
-          const vrm = gltf.userData.vrm
-          if (!vrm) {
-            setError('Không phải file VRM hợp lệ')
-            return
+          if (isGLB) {
+            // GLB model: plain glTF scene
+            const model = gltf.scene
+            // Auto-center and scale the model
+            const box = new THREE.Box3().setFromObject(model)
+            const size = new THREE.Vector3()
+            const center = new THREE.Vector3()
+            box.getSize(size)
+            box.getCenter(center)
+            const maxDim = Math.max(size.x, size.y, size.z)
+            const scale = 2.0 / maxDim
+            model.scale.setScalar(scale)
+            // Re-center after scaling
+            box.setFromObject(model)
+            box.getCenter(center)
+            model.position.sub(center)
+            model.position.y += size.y * scale / 2
+
+            scene.add(model)
+
+            // Play animations if available
+            const mixer = new THREE.AnimationMixer(model)
+            mixerRef.current = mixer
+            if (gltf.animations.length > 0) {
+              gltf.animations.forEach((clip: any) => {
+                mixer.clipAction(clip).play()
+              })
+            }
+
+            // Adjust camera for GLB
+            camera.position.set(0, 1.2, 3.5)
+            controls.target.set(0, 1, 0)
+            controls.update()
+
+            vrmRef.current = null // No VRM data for GLB
+          } else {
+            // VRM model
+            const vrm = gltf.userData.vrm
+            if (!vrm) {
+              setError('Không phải file VRM hợp lệ')
+              return
+            }
+            vrmRef.current = vrm
+
+            // Rotate to face camera (VRM default faces +Z)
+            vrm.scene.rotation.y = Math.PI
+            scene.add(vrm.scene)
+
+            // Setup idle animation
+            const mixer = new THREE.AnimationMixer(vrm.scene)
+            mixerRef.current = mixer
           }
-          vrmRef.current = vrm
-
-          // Rotate to face camera (VRM default faces +Z)
-          vrm.scene.rotation.y = Math.PI
-          scene.add(vrm.scene)
-
-          // Setup idle animation (simple breathing/swaying)
-          const mixer = new THREE.AnimationMixer(vrm.scene)
-          mixerRef.current = mixer
 
           setIsLoading(false)
           setLoadProgress('')
@@ -148,15 +191,16 @@ const VRMCharacter = forwardRef<VRMCharacterHandle, VRMCharacterProps>(
             animFrameRef.current = requestAnimationFrame(animate)
             const delta = clock.getDelta()
 
-            // Auto blink
-            if (vrm.expressionManager) {
+            // Auto blink (VRM only)
+            const vrm = vrmRef.current
+            if (vrm?.expressionManager) {
               const blinkPhase = Math.sin(clock.elapsedTime * 3) > 0.95
               vrm.expressionManager.setValue('blink', blinkPhase ? 1 : 0)
             }
 
             controls.update()
-            vrm.update(delta)
-            mixer.update(delta)
+            if (vrm) vrm.update(delta)
+            mixerRef.current?.update(delta)
             renderer.render(scene, camera)
           }
           animate()

@@ -47,7 +47,8 @@ export default function ChatPage() {
   const [models, setModels] = useState<any[]>([])
   const [characters, setCharacters] = useState<Live2DChar[]>([])
   const [selectedCharUrl, setSelectedCharUrl] = useState<string | undefined>(undefined)
-  const isVRM = selectedCharUrl?.endsWith('.vrm') || false
+  const is3D = selectedCharUrl?.endsWith('.vrm') || selectedCharUrl?.endsWith('.glb') || false
+  const isVRM = is3D
   const [charKey, setCharKey] = useState(0)
   const [showSettings, setShowSettings] = useState(false)
   const [followCursor, setFollowCursor] = useState(true)
@@ -595,7 +596,9 @@ export default function ChatPage() {
                   </div>
                   <span className="char-card-name">{char.name}</span>
                   {char.modelUrl.endsWith('.vrm') ? (
-                    <span className="char-card-badge" style={{ background: 'rgba(99,102,241,0.3)', color: '#a5b4fc' }}>3D</span>
+                    <span className="char-card-badge" style={{ background: 'rgba(99,102,241,0.3)', color: '#a5b4fc' }}>VRM</span>
+                  ) : char.modelUrl.endsWith('.glb') ? (
+                    <span className="char-card-badge" style={{ background: 'rgba(234,179,8,0.3)', color: '#fde68a' }}>GLB</span>
                   ) : (
                     <span className="char-card-badge" style={{ background: 'rgba(16,185,129,0.25)', color: '#6ee7b7' }}>2D</span>
                   )}
