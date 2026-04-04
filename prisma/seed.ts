@@ -134,11 +134,22 @@ async function main() {
       { name: 'Parrot (GLB)', modelUrl: '/models/3d/Parrot.glb', category: '3d', sortOrder: 59 },
       { name: 'Flamingo (GLB)', modelUrl: '/models/3d/Flamingo.glb', category: '3d', sortOrder: 60 },
       { name: 'Stork (GLB)', modelUrl: '/models/3d/Stork.glb', category: '3d', sortOrder: 61 },
+      // New GLB models batch 2
+      { name: 'Kira (GLB)', modelUrl: '/models/3d/kira.glb', category: '3d', sortOrder: 62 },
+      { name: 'Littlest Tokyo (GLB)', modelUrl: '/models/3d/LittlestTokyo.glb', category: '3d', sortOrder: 63 },
+      { name: 'ReadyPlayer Me (GLB)', modelUrl: '/models/3d/ReadyPlayerMe.glb', category: '3d', sortOrder: 64 },
+      { name: 'BrainStem (GLB)', modelUrl: '/models/3d/BrainStem.glb', category: '3d', sortOrder: 65 },
+      { name: 'Fox (GLB)', modelUrl: '/models/3d/Fox.glb', category: '3d', sortOrder: 66 },
+      { name: 'CesiumMan (GLB)', modelUrl: '/models/3d/CesiumMan.glb', category: '3d', sortOrder: 67 },
+      { name: 'Rigged Figure (GLB)', modelUrl: '/models/3d/RiggedFigure.glb', category: '3d', sortOrder: 68 },
+      { name: 'Duck (GLB)', modelUrl: '/models/3d/Duck.glb', category: '3d', sortOrder: 69 },
+      { name: 'Milk Truck (GLB)', modelUrl: '/models/3d/CesiumMilkTruck.glb', category: '3d', sortOrder: 70 },
+      { name: 'Toy Car (GLB)', modelUrl: '/models/3d/ToyCar.glb', category: '3d', sortOrder: 71 },
       // Ren is inactive (moc3 v6, needs Cubism SDK 5.x)
       { name: 'Ren (SDK5)', modelUrl: '/models/Ren/Ren.model3.json', category: 'anime', isActive: false, sortOrder: 99 },
     ],
   })
-  console.log('Live2D characters seeded (58 active + 1 inactive)')
+  console.log('Live2D characters seeded (68 active + 1 inactive)')
 }
 
 main()

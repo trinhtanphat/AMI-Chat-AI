@@ -61,6 +61,8 @@ const VRMCharacter = forwardRef<VRMCharacterHandle, VRMCharacterProps>(
           if (cancelled) return
 
           const { GLTFLoader } = await import('three/examples/jsm/loaders/GLTFLoader.js')
+          const { KTX2Loader } = await import('three/examples/jsm/loaders/KTX2Loader.js')
+          const { MeshoptDecoder } = await import('three/examples/jsm/libs/meshopt_decoder.module.js')
           const { OrbitControls } = await import('three/examples/jsm/controls/OrbitControls.js')
           const { VRMLoaderPlugin } = await import('@pixiv/three-vrm')
           if (cancelled) return
@@ -113,6 +115,13 @@ const VRMCharacter = forwardRef<VRMCharacterHandle, VRMCharacterProps>(
           setLoadProgress('Đang tải mô hình 3D...')
           const loader = new GLTFLoader()
           const isGLB = modelUrl.toLowerCase().endsWith('.glb')
+
+          // Setup KTX2 texture support
+          const ktx2Loader = new KTX2Loader()
+          ktx2Loader.setTranscoderPath('https://unpkg.com/three@0.170.0/examples/jsm/libs/basis/')
+          ktx2Loader.detectSupport(renderer)
+          loader.setKTX2Loader(ktx2Loader)
+          loader.setMeshoptDecoder(MeshoptDecoder)
 
           // Only register VRM plugin for .vrm files
           if (!isGLB) {
