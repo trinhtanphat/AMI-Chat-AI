@@ -145,11 +145,13 @@ async function main() {
       { name: 'Duck (GLB)', modelUrl: '/models/3d/Duck.glb', category: '3d', sortOrder: 69 },
       { name: 'Milk Truck (GLB)', modelUrl: '/models/3d/CesiumMilkTruck.glb', category: '3d', sortOrder: 70 },
       { name: 'Toy Car (GLB)', modelUrl: '/models/3d/ToyCar.glb', category: '3d', sortOrder: 71 },
+      // Custom generated character from image (TRELLIS AI)
+      { name: 'My Character (GLB)', modelUrl: '/models/3d/MyCharacter.glb', category: '3d', sortOrder: 72 },
       // Ren is inactive (moc3 v6, needs Cubism SDK 5.x)
       { name: 'Ren (SDK5)', modelUrl: '/models/Ren/Ren.model3.json', category: 'anime', isActive: false, sortOrder: 99 },
     ],
   })
-  console.log('Live2D characters seeded (68 active + 1 inactive)')
+  console.log('Live2D characters seeded (69 active + 1 inactive)')
 }
 
 main()
