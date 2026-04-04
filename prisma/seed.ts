@@ -107,7 +107,7 @@ async function main() {
       // === 3D VRM Models ===
       { name: 'VRM Sample (3D)', modelUrl: '/models/3d/VRM1_Sample.vrm', category: '3d', sortOrder: 35 },
       { name: 'Seed-san (3D)', modelUrl: '/models/3d/Seed-san.vrm', category: '3d', sortOrder: 36 },
-      { name: 'Twist Girl (3D)', modelUrl: '/models/3d/Twist_Girl.vrm', category: '3d', sortOrder: 37 },
+      { name: 'Twist Constraint (3D)', modelUrl: '/models/3d/VRM1_Constraint_Twist.vrm', category: '3d', sortOrder: 37 },
       // Ren is inactive (moc3 v6, needs Cubism SDK 5.x)
       { name: 'Ren (SDK5)', modelUrl: '/models/Ren/Ren.model3.json', category: 'anime', isActive: false, sortOrder: 99 },
     ],

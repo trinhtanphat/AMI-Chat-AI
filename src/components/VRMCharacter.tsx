@@ -17,6 +17,7 @@ const VRMCharacter = forwardRef<VRMCharacterHandle, VRMCharacterProps>(
     const rendererRef = useRef<any>(null)
     const sceneRef = useRef<any>(null)
     const cameraRef = useRef<any>(null)
+    const controlsRef = useRef<any>(null)
     const vrmRef = useRef<any>(null)
     const clockRef = useRef<any>(null)
     const mixerRef = useRef<any>(null)
@@ -60,6 +61,7 @@ const VRMCharacter = forwardRef<VRMCharacterHandle, VRMCharacterProps>(
           if (cancelled) return
 
           const { GLTFLoader } = await import('three/examples/jsm/loaders/GLTFLoader.js')
+          const { OrbitControls } = await import('three/examples/jsm/controls/OrbitControls.js')
           const { VRMLoaderPlugin } = await import('@pixiv/three-vrm')
           if (cancelled) return
 
@@ -91,6 +93,17 @@ const VRMCharacter = forwardRef<VRMCharacterHandle, VRMCharacterProps>(
           const directional = new THREE.DirectionalLight(0xffffff, 0.6)
           directional.position.set(1, 2, 3)
           scene.add(directional)
+
+          // OrbitControls for zoom/rotate
+          const controls = new OrbitControls(camera, renderer.domElement)
+          controls.target.set(0, 1, 0)
+          controls.enableDamping = true
+          controls.dampingFactor = 0.1
+          controls.minDistance = 1
+          controls.maxDistance = 10
+          controls.maxPolarAngle = Math.PI * 0.85
+          controls.update()
+          controlsRef.current = controls
 
           // Clock
           const clock = new THREE.Clock()
@@ -135,18 +148,13 @@ const VRMCharacter = forwardRef<VRMCharacterHandle, VRMCharacterProps>(
             animFrameRef.current = requestAnimationFrame(animate)
             const delta = clock.getDelta()
 
-            // Simple idle animation: gentle sway
-            if (vrm.scene) {
-              const t = clock.elapsedTime
-              vrm.scene.rotation.y = Math.PI + Math.sin(t * 0.5) * 0.05
-            }
-
             // Auto blink
             if (vrm.expressionManager) {
               const blinkPhase = Math.sin(clock.elapsedTime * 3) > 0.95
               vrm.expressionManager.setValue('blink', blinkPhase ? 1 : 0)
             }
 
+            controls.update()
             vrm.update(delta)
             mixer.update(delta)
             renderer.render(scene, camera)
@@ -183,6 +191,7 @@ const VRMCharacter = forwardRef<VRMCharacterHandle, VRMCharacterProps>(
         if (container) {
           (container as any).__resizeCleanup?.()
         }
+        controlsRef.current?.dispose()
         rendererRef.current?.dispose()
         rendererRef.current?.domElement?.remove()
       }
@@ -195,7 +204,6 @@ const VRMCharacter = forwardRef<VRMCharacterHandle, VRMCharacterProps>(
           position: 'fixed',
           inset: 0,
           zIndex: 1,
-          pointerEvents: 'none',
         }}
       >
         {isLoading && (
