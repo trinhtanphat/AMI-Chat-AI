@@ -133,9 +133,12 @@ export async function POST(req: NextRequest) {
     })
   } catch (error: any) {
     console.error('Chat error:', error)
-    return NextResponse.json(
-      { error: error.message || 'Internal server error' },
-      { status: 500 }
-    )
+    const msg = error.message || 'Internal server error'
+    // Map known error patterns to proper status codes
+    const status = msg.includes('hết credit') || msg.includes('402') ? 402
+      : msg.includes('API key') || msg.includes('401') ? 401
+      : msg.includes('Quá nhiều') || msg.includes('429') ? 429
+      : 500
+    return NextResponse.json({ error: msg }, { status })
   }
 }

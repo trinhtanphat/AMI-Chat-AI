@@ -66,8 +66,24 @@ export async function streamChatCompletion(
   })
 
   if (!response.ok) {
-    const error = await response.text()
-    throw new Error(`AI API error: ${response.status} - ${error}`)
+    const errorText = await response.text()
+    console.error(`AI API error [${response.status}] from ${model.provider.name}:`, errorText)
+
+    // Return user-friendly messages for common provider errors
+    switch (response.status) {
+      case 401:
+        throw new Error('API key không hợp lệ hoặc đã hết hạn. Vui lòng liên hệ admin để cập nhật API key.')
+      case 402:
+        throw new Error('API key đã hết credit. Vui lòng chọn mô hình AI khác hoặc liên hệ admin để nạp thêm.')
+      case 429:
+        throw new Error('Quá nhiều yêu cầu. Vui lòng chờ một chút rồi thử lại.')
+      case 404:
+        throw new Error(`Mô hình "${model.modelId}" không tồn tại trên provider. Vui lòng chọn mô hình khác.`)
+      case 503:
+        throw new Error('Dịch vụ AI đang bảo trì. Vui lòng thử lại sau.')
+      default:
+        throw new Error(`Lỗi từ AI provider (${response.status}). Vui lòng thử mô hình khác hoặc liên hệ admin.`)
+    }
   }
 
   return response.body

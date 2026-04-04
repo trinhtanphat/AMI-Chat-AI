@@ -104,15 +104,31 @@ async function main() {
       { name: 'Nito', modelUrl: '/models/nito/nito.model.json', category: 'default', sortOrder: 32 },
       { name: 'Tsumiki', modelUrl: '/models/tsumiki/tsumiki.model.json', category: 'anime', sortOrder: 33 },
       { name: 'Ni-j', modelUrl: '/models/ni-j/ni-j.model.json', category: 'default', sortOrder: 34 },
+      // === New 2D Models ===
+      { name: 'Epsilon', modelUrl: '/models/Epsilon/Epsilon2.1.model.json', category: 'default', sortOrder: 35 },
+      { name: 'Gantzert Felixander', modelUrl: '/models/GantzertFelixander/Gantzert_Felixander.model.json', category: 'default', sortOrder: 36 },
+      { name: 'Nietzsche', modelUrl: '/models/Nietzsche/nietzsche.model.json', category: 'default', sortOrder: 37 },
       // === 3D VRM Models ===
-      { name: 'VRM Sample (3D)', modelUrl: '/models/3d/VRM1_Sample.vrm', category: '3d', sortOrder: 35 },
-      { name: 'Seed-san (3D)', modelUrl: '/models/3d/Seed-san.vrm', category: '3d', sortOrder: 36 },
-      { name: 'Twist Constraint (3D)', modelUrl: '/models/3d/VRM1_Constraint_Twist.vrm', category: '3d', sortOrder: 37 },
+      { name: 'VRM Sample (3D)', modelUrl: '/models/3d/VRM1_Sample.vrm', category: '3d', sortOrder: 38 },
+      { name: 'Seed-san (3D)', modelUrl: '/models/3d/Seed-san.vrm', category: '3d', sortOrder: 39 },
+      { name: 'Twist Girl (3D)', modelUrl: '/models/3d/VRM1_Constraint_Twist.vrm', category: '3d', sortOrder: 40 },
+      { name: 'Avatar Orion (3D)', modelUrl: '/models/3d/Avatar_Orion.vrm', category: '3d', sortOrder: 41 },
+      { name: 'CryptoVoxels (3D)', modelUrl: '/models/3d/cryptovoxels.vrm', category: '3d', sortOrder: 42 },
+      { name: 'Meebit (3D)', modelUrl: '/models/3d/Meebit.vrm', category: '3d', sortOrder: 43 },
+      { name: 'AvatarSample A (3D)', modelUrl: '/models/3d/AvatarSample_A.vrm', category: '3d', sortOrder: 44 },
+      { name: 'AvatarSample B (3D)', modelUrl: '/models/3d/AvatarSample_B.vrm', category: '3d', sortOrder: 45 },
+      { name: 'AvatarSample C (3D)', modelUrl: '/models/3d/AvatarSample_C.vrm', category: '3d', sortOrder: 46 },
+      { name: 'Vivi (3D)', modelUrl: '/models/3d/Vivi.vrm', category: '3d', sortOrder: 47 },
+      { name: 'Victoria Rubin (3D)', modelUrl: '/models/3d/Victoria_Rubin.vrm', category: '3d', sortOrder: 48 },
+      { name: 'Sendagaya Shibu (3D)', modelUrl: '/models/3d/Sendagaya_Shibu.vrm', category: '3d', sortOrder: 49 },
+      { name: 'Sendagaya Shino (3D)', modelUrl: '/models/3d/Sendagaya_Shino.vrm', category: '3d', sortOrder: 50 },
+      { name: 'Vita (3D)', modelUrl: '/models/3d/Vita.vrm', category: '3d', sortOrder: 51 },
+      { name: 'Sakurada Fumiriya (3D)', modelUrl: '/models/3d/Sakurada_Fumiriya.vrm', category: '3d', sortOrder: 52 },
       // Ren is inactive (moc3 v6, needs Cubism SDK 5.x)
       { name: 'Ren (SDK5)', modelUrl: '/models/Ren/Ren.model3.json', category: 'anime', isActive: false, sortOrder: 99 },
     ],
   })
-  console.log('Live2D characters seeded (37 active + 1 inactive)')
+  console.log('Live2D characters seeded (49 active + 1 inactive)')
 }
 
 main()

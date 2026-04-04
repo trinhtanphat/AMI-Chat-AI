@@ -28,10 +28,15 @@ export async function POST(req: NextRequest) {
 
     if (!response.ok) {
       const text = await response.text()
-      return NextResponse.json(
-        { error: `API returned ${response.status}: ${text.substring(0, 200)}` },
-        { status: 502 }
-      )
+      let msg = `API trả về lỗi ${response.status}`
+      try {
+        const json = JSON.parse(text)
+        msg = json.detail || json.error || msg
+      } catch {
+        msg += `: ${text.substring(0, 200)}`
+      }
+      // Return 200 with error field so Cloudflare doesn't show 502 page
+      return NextResponse.json({ error: msg, models: [] })
     }
 
     const data = await response.json()
@@ -46,8 +51,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ models: modelList })
   } catch (err: any) {
     return NextResponse.json(
-      { error: `Không thể kết nối: ${err.message}` },
-      { status: 502 }
+      { error: `Không thể kết nối đến provider: ${err.message}`, models: [] }
     )
   }
 }
