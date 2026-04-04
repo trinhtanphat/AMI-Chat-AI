@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import ChatMessage from '@/components/ChatMessage'
 import ChatInput from '@/components/ChatInput'
 import Live2DCharacter, { type Live2DCharacterHandle } from '@/components/Live2DCharacter'
+import VRMCharacter, { type VRMCharacterHandle } from '@/components/VRMCharacter'
 import SettingsPanel from '@/components/SettingsPanel'
 import { useChatStore } from '@/store/chat'
 
@@ -34,6 +35,7 @@ export default function ChatPage() {
   const router = useRouter()
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const live2dRef = useRef<Live2DCharacterHandle>(null)
+  const vrmRef = useRef<VRMCharacterHandle>(null)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [bgIndex, setBgIndex] = useState(0)
   const [showUserMenu, setShowUserMenu] = useState(false)
@@ -45,6 +47,7 @@ export default function ChatPage() {
   const [models, setModels] = useState<any[]>([])
   const [characters, setCharacters] = useState<Live2DChar[]>([])
   const [selectedCharUrl, setSelectedCharUrl] = useState<string | undefined>(undefined)
+  const isVRM = selectedCharUrl?.endsWith('.vrm') || false
   const [charKey, setCharKey] = useState(0)
   const [showSettings, setShowSettings] = useState(false)
   const [followCursor, setFollowCursor] = useState(true)
@@ -64,6 +67,7 @@ export default function ChatPage() {
     conversations,
     setConversations,
     removeConversation,
+    autoVoiceMode,
   } = useChatStore()
 
   useEffect(() => {
@@ -138,6 +142,46 @@ export default function ChatPage() {
     } catch {}
   }
 
+  const autoPlayTTS = useCallback(async (text: string) => {
+    const restartListening = () => {
+      const fn = (window as any).__startVoiceRecording
+      if (fn) setTimeout(fn, 500)
+    }
+
+    try {
+      const res = await fetch('/api/tts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: text.slice(0, 2000) }),
+      })
+      if (res.ok) {
+        const blob = await res.blob()
+        const url = URL.createObjectURL(blob)
+        const audio = new Audio(url)
+        audio.onended = () => { URL.revokeObjectURL(url); restartListening() }
+        audio.onerror = () => { URL.revokeObjectURL(url); browserTTSFallback(text, restartListening) }
+        audio.play()
+        return
+      }
+    } catch {}
+    browserTTSFallback(text, restartListening)
+  }, [])
+
+  const browserTTSFallback = (text: string, onDone: () => void) => {
+    if (!('speechSynthesis' in window)) { onDone(); return }
+    window.speechSynthesis.cancel()
+    const utterance = new SpeechSynthesisUtterance(text.slice(0, 2000))
+    utterance.lang = 'vi-VN'
+    utterance.rate = 1.0
+    utterance.pitch = 1.3
+    const voices = window.speechSynthesis.getVoices()
+    const preferred = voices.find(v => v.lang.startsWith('vi')) || voices.find(v => v.name.toLowerCase().includes('female'))
+    if (preferred) utterance.voice = preferred
+    utterance.onend = () => onDone()
+    utterance.onerror = () => onDone()
+    window.speechSynthesis.speak(utterance)
+  }
+
   const handleSend = async (message: string) => {
     const userMessage = {
       id: 'temp-' + Date.now(),
@@ -195,6 +239,11 @@ export default function ChatPage() {
 
       if (fullContent) {
         addMessage({ id: 'assistant-' + Date.now(), role: 'assistant', content: fullContent })
+
+        // Auto-voice: play TTS then restart listening
+        if (autoVoiceMode) {
+          autoPlayTTS(fullContent)
+        }
       }
 
       const convRes = await fetch('/api/conversations')
@@ -230,16 +279,28 @@ export default function ChatPage() {
       {/* Background */}
       <div className="scene-background" style={{ backgroundImage: `url(${BACKGROUNDS[bgIndex].src})` }} />
 
-      {/* Live2D Character */}
-      <Live2DCharacter
-        key={charKey}
-        ref={live2dRef}
-        modelUrl={selectedCharUrl}
-        onModelLoaded={(info) => {
-          setModelExpressions(info.expressions)
-          setModelMotionGroups(info.motionGroups)
-        }}
-      />
+      {/* Character (Live2D or VRM) */}
+      {isVRM ? (
+        <VRMCharacter
+          key={charKey}
+          ref={vrmRef}
+          modelUrl={selectedCharUrl!}
+          onModelLoaded={() => {
+            setModelExpressions([])
+            setModelMotionGroups([])
+          }}
+        />
+      ) : (
+        <Live2DCharacter
+          key={charKey}
+          ref={live2dRef}
+          modelUrl={selectedCharUrl}
+          onModelLoaded={(info) => {
+            setModelExpressions(info.expressions)
+            setModelMotionGroups(info.motionGroups)
+          }}
+        />
+      )}
 
       {/* Smile / Expression trigger button — always visible */}
       <button
@@ -483,6 +544,7 @@ export default function ChatPage() {
                     )}
                   </div>
                   <span className="char-card-name">{char.name}</span>
+                  {char.modelUrl.endsWith('.vrm') && <span className="char-card-badge" style={{ background: 'rgba(99,102,241,0.3)', color: '#a5b4fc' }}>3D</span>}
                   {char.isDefault && <span className="char-card-badge">★</span>}
                 </button>
               ))}

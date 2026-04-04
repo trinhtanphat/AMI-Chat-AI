@@ -78,16 +78,17 @@ export default function ChatMessage({ role, content, isStreaming }: ChatMessageP
     }
     window.speechSynthesis.cancel()
     const utterance = new SpeechSynthesisUtterance(text)
+    utterance.lang = 'vi-VN'
     utterance.rate = 1.0
     utterance.pitch = 1.3
-    // Try to find a female/Japanese voice
+    // Try to find a Vietnamese voice
     const voices = window.speechSynthesis.getVoices()
     const preferred = voices.find(v =>
-      v.lang.startsWith('ja') && v.name.toLowerCase().includes('female')
+      v.lang.startsWith('vi') && v.name.toLowerCase().includes('female')
     ) || voices.find(v =>
-      v.lang.startsWith('ja')
+      v.lang.startsWith('vi')
     ) || voices.find(v =>
-      v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('zira') || v.name.toLowerCase().includes('haruka')
+      v.name.toLowerCase().includes('female')
     )
     if (preferred) utterance.voice = preferred
     utterance.onend = () => setPlaying(false)

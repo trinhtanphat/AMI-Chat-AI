@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  amichat:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        NEXTAUTH_SECRET: "7zVLMloH8aAOlyJhRgQ3l76WE9Oryvs17uFwVg67OaE="
+        DATABASE_URL: "file:./dev.db"
+        ADMIN_EMAIL: "admin@vnso.vn"
+        ADMIN_PASSWORD: "Admin@@6789@@"
+    container_name: amichat
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=file:./dev.db
+      - NEXTAUTH_URL=https://amichat.vnso.vn
+      - NEXTAUTH_SECRET=7zVLMloH8aAOlyJhRgQ3l76WE9Oryvs17uFwVg67OaE=
+      - ADMIN_EMAIL=admin@vnso.vn
+      - ADMIN_PASSWORD=Admin@@6789@@
+    volumes:
+      - amichat-data:/app/prisma
+
+volumes:
+  amichat-data:

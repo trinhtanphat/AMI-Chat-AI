@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
 
   const { name, baseUrl, apiKey, models } = await req.json()
 
-  if (!name || !baseUrl || !apiKey) {
+  if (!name || !baseUrl) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
   }
 
@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
     data: {
       name,
       baseUrl,
-      apiKey,
+      apiKey: apiKey || '',
       isActive: true,
       models: models?.length
         ? {

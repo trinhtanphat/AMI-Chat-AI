@@ -12,9 +12,12 @@ interface ChatInputProps {
 export default function ChatInput({ onSend }: ChatInputProps) {
   const [message, setMessage] = useState('')
   const textareaRef = useRef<HTMLTextAreaElement>(null)
-  const { isStreaming } = useChatStore()
+  const { isStreaming, autoVoiceMode, autoVoiceDelay, setAutoVoiceMode, setAutoVoiceDelay } = useChatStore()
   const [isRecording, setIsRecording] = useState(false)
   const recognitionRef = useRef<any>(null)
+  const silenceTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const pendingTranscriptRef = useRef('')
+  const [showVoiceSettings, setShowVoiceSettings] = useState(false)
 
   useEffect(() => {
     if (textareaRef.current) {
@@ -23,10 +26,29 @@ export default function ChatInput({ onSend }: ChatInputProps) {
     }
   }, [message])
 
+  // Auto-send after silence in auto-voice mode
+  const resetSilenceTimer = useCallback(() => {
+    if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current)
+    if (autoVoiceMode && pendingTranscriptRef.current.trim()) {
+      silenceTimerRef.current = setTimeout(() => {
+        const text = pendingTranscriptRef.current.trim()
+        if (text && !isStreaming) {
+          onSend(text)
+          setMessage('')
+          pendingTranscriptRef.current = ''
+          // Stop recognition – it will restart after TTS plays
+          recognitionRef.current?.stop()
+          setIsRecording(false)
+        }
+      }, autoVoiceDelay * 1000)
+    }
+  }, [autoVoiceMode, autoVoiceDelay, isStreaming, onSend])
+
   const handleSubmit = () => {
     if (!message.trim() || isStreaming || message.length > MAX_CHARS) return
     onSend(message.trim())
     setMessage('')
+    pendingTranscriptRef.current = ''
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto'
     }
@@ -46,13 +68,7 @@ export default function ChatInput({ onSend }: ChatInputProps) {
     }
   }
 
-  const toggleRecording = useCallback(() => {
-    if (isRecording) {
-      recognitionRef.current?.stop()
-      setIsRecording(false)
-      return
-    }
-
+  const startRecording = useCallback(() => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
     if (!SpeechRecognition) {
       alert('Trình duyệt không hỗ trợ nhận diện giọng nói. Vui lòng dùng Chrome.')
@@ -69,7 +85,10 @@ export default function ChatInput({ onSend }: ChatInputProps) {
       for (let i = 0; i < event.results.length; i++) {
         transcript += event.results[i][0].transcript
       }
-      setMessage(transcript.slice(0, MAX_CHARS))
+      const clipped = transcript.slice(0, MAX_CHARS)
+      setMessage(clipped)
+      pendingTranscriptRef.current = clipped
+      resetSilenceTimer()
     }
 
     recognition.onerror = () => {
@@ -83,11 +102,47 @@ export default function ChatInput({ onSend }: ChatInputProps) {
     recognitionRef.current = recognition
     recognition.start()
     setIsRecording(true)
-  }, [isRecording])
+  }, [resetSilenceTimer])
+
+  const toggleRecording = useCallback(() => {
+    if (isRecording) {
+      if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current)
+      recognitionRef.current?.stop()
+      setIsRecording(false)
+      return
+    }
+    startRecording()
+  }, [isRecording, startRecording])
+
+  // Start listening automatically when auto-voice mode is enabled
+  useEffect(() => {
+    if (autoVoiceMode && !isRecording && !isStreaming) {
+      startRecording()
+    }
+    if (!autoVoiceMode && isRecording) {
+      recognitionRef.current?.stop()
+      setIsRecording(false)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoVoiceMode])
+
+  // Expose startRecording on window for chat page to call after TTS ends
+  useEffect(() => {
+    (window as any).__startVoiceRecording = startRecording
+    return () => { delete (window as any).__startVoiceRecording }
+  }, [startRecording])
+
+  // Clean up silence timer
+  useEffect(() => {
+    return () => {
+      if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current)
+    }
+  }, [])
 
   return (
     <div className="chat-input-area">
       <div className="chat-input-wrapper">
+        {/* Mic button */}
         <button
           className="mic-btn"
           onClick={toggleRecording}
@@ -115,13 +170,38 @@ export default function ChatInput({ onSend }: ChatInputProps) {
             <line x1="12" x2="12" y1="19" y2="22" />
           </svg>
         </button>
+
+        {/* Auto-voice toggle */}
+        <button
+          onClick={() => setShowVoiceSettings(v => !v)}
+          title="Chế độ tự động nghe & trả lời"
+          style={{
+            width: 28,
+            height: 28,
+            borderRadius: 6,
+            border: 'none',
+            background: autoVoiceMode ? 'rgba(99,102,241,0.3)' : 'transparent',
+            color: autoVoiceMode ? '#818cf8' : 'rgba(255,255,255,0.3)',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0,
+            transition: 'all 0.15s',
+          }}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 20h9" /><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z" />
+          </svg>
+        </button>
+
         <textarea
           ref={textareaRef}
           rows={1}
           value={message}
           onChange={handleChange}
           onKeyDown={handleKeyDown}
-          placeholder={isRecording ? 'Đang nghe...' : 'Nhập tin nhắn...'}
+          placeholder={isRecording ? 'Đang nghe...' : autoVoiceMode ? 'Chế độ tự động bật' : 'Nhập tin nhắn...'}
           disabled={isStreaming}
         />
         <button
@@ -140,6 +220,54 @@ export default function ChatInput({ onSend }: ChatInputProps) {
           )}
         </button>
       </div>
+
+      {/* Auto-voice settings popup */}
+      {showVoiceSettings && (
+        <div style={{
+          position: 'absolute', bottom: '100%', left: 12, marginBottom: 8,
+          background: 'rgba(20,24,28,0.97)', backdropFilter: 'blur(16px)',
+          border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12,
+          padding: 16, width: 240, boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+          zIndex: 50,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+            <span style={{ fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.8)' }}>Chế độ tự động</span>
+            <button
+              onClick={() => setAutoVoiceMode(!autoVoiceMode)}
+              style={{
+                width: 40, height: 22, borderRadius: 11, border: 'none', cursor: 'pointer',
+                background: autoVoiceMode ? '#6366f1' : 'rgba(255,255,255,0.15)',
+                position: 'relative', transition: 'background 0.2s',
+              }}
+            >
+              <div style={{
+                width: 16, height: 16, borderRadius: '50%', background: 'white',
+                position: 'absolute', top: 3,
+                left: autoVoiceMode ? 21 : 3,
+                transition: 'left 0.2s',
+              }} />
+            </button>
+          </div>
+          <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginBottom: 12, lineHeight: 1.5 }}>
+            Tự động nghe → gửi tin nhắn → đọc phản hồi → nghe tiếp
+          </p>
+          <div>
+            <label style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', display: 'block', marginBottom: 6 }}>
+              Chờ im lặng: {autoVoiceDelay}s
+            </label>
+            <input
+              type="range"
+              min={1}
+              max={5}
+              step={0.5}
+              value={autoVoiceDelay}
+              onChange={e => setAutoVoiceDelay(parseFloat(e.target.value))}
+              style={{ width: '100%', accentColor: '#6366f1' }}
+            />
+          </div>
+        </div>
+      )}
+
       <div className="char-count">{message.length}/{MAX_CHARS}</div>
     </div>
   )

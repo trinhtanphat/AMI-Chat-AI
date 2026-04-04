@@ -24,6 +24,8 @@ interface ChatState {
   isStreaming: boolean
   streamingContent: string
   selectedModelId: string | null
+  autoVoiceMode: boolean
+  autoVoiceDelay: number
 
   setConversations: (conversations: Conversation[]) => void
   setCurrentConversation: (id: string | null) => void
@@ -34,6 +36,8 @@ interface ChatState {
   appendStreamingContent: (content: string) => void
   setSelectedModelId: (id: string | null) => void
   removeConversation: (id: string) => void
+  setAutoVoiceMode: (on: boolean) => void
+  setAutoVoiceDelay: (delay: number) => void
 }
 
 export const useChatStore = create<ChatState>((set) => ({
@@ -43,6 +47,8 @@ export const useChatStore = create<ChatState>((set) => ({
   isStreaming: false,
   streamingContent: '',
   selectedModelId: null,
+  autoVoiceMode: false,
+  autoVoiceDelay: 2,
 
   setConversations: (conversations) => set({ conversations }),
   setCurrentConversation: (id) => set({ currentConversationId: id }),
@@ -59,4 +65,6 @@ export const useChatStore = create<ChatState>((set) => ({
       currentConversationId: state.currentConversationId === id ? null : state.currentConversationId,
       messages: state.currentConversationId === id ? [] : state.messages,
     })),
+  setAutoVoiceMode: (on) => set({ autoVoiceMode: on }),
+  setAutoVoiceDelay: (delay) => set({ autoVoiceDelay: delay }),
 }))

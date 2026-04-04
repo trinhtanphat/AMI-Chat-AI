@@ -78,7 +78,7 @@ async function main() {
       { name: 'Wanko', modelUrl: '/models/Wanko/Wanko.model3.json', category: 'mascot', sortOrder: 8 },
       { name: 'Senko', modelUrl: '/models/Senko/senko.model3.json', category: 'anime', sortOrder: 9 },
       // === Cubism 2 Classic Models ===
-      { name: 'Shizuku', modelUrl: '/models/Shizuku/shizuku.model.json', category: 'anime', sortOrder: 10 },
+      { name: 'Shizuku', modelUrl: '/models/shizuku/shizuku.model.json', category: 'anime', sortOrder: 10 },
       { name: 'Miku', modelUrl: '/models/Miku/miku.model.json', category: 'anime', sortOrder: 11 },
       { name: 'Rem', modelUrl: '/models/Rem/model.json', category: 'anime', sortOrder: 12 },
       { name: 'HK416', modelUrl: '/models/HK416/model.json', category: 'anime', sortOrder: 13 },
@@ -97,11 +97,22 @@ async function main() {
       { name: 'Tia', modelUrl: '/models/Tia/index.json', category: 'chibi', sortOrder: 26 },
       { name: 'Umaru', modelUrl: '/models/Umaru/model.json', category: 'chibi', sortOrder: 27 },
       { name: 'Platelet', modelUrl: '/models/Platelet/model.json', category: 'anime', sortOrder: 28 },
-      // Ren is inactive (moc3 v6, needs Cubism Core SDK 06.x)
-      { name: 'Ren ⚠️', modelUrl: '/models/Ren/Ren.model3.json', category: 'anime', isActive: false, sortOrder: 99 },
+      // === New Community Models ===
+      { name: 'Haruto', modelUrl: '/models/haruto/haruto.model.json', category: 'default', sortOrder: 29 },
+      { name: 'Nico', modelUrl: '/models/nico/nico.model.json', category: 'anime', sortOrder: 30 },
+      { name: 'Nipsilon', modelUrl: '/models/nipsilon/nipsilon.model.json', category: 'default', sortOrder: 31 },
+      { name: 'Nito', modelUrl: '/models/nito/nito.model.json', category: 'default', sortOrder: 32 },
+      { name: 'Tsumiki', modelUrl: '/models/tsumiki/tsumiki.model.json', category: 'anime', sortOrder: 33 },
+      { name: 'Ni-j', modelUrl: '/models/ni-j/ni-j.model.json', category: 'default', sortOrder: 34 },
+      // === 3D VRM Models ===
+      { name: 'VRM Sample (3D)', modelUrl: '/models/3d/VRM1_Sample.vrm', category: '3d', sortOrder: 35 },
+      { name: 'Seed-san (3D)', modelUrl: '/models/3d/Seed-san.vrm', category: '3d', sortOrder: 36 },
+      { name: 'Twist Girl (3D)', modelUrl: '/models/3d/Twist_Girl.vrm', category: '3d', sortOrder: 37 },
+      // Ren is inactive (moc3 v6, needs Cubism SDK 5.x)
+      { name: 'Ren (SDK5)', modelUrl: '/models/Ren/Ren.model3.json', category: 'anime', isActive: false, sortOrder: 99 },
     ],
   })
-  console.log('Live2D characters seeded (28 active + 1 inactive)')
+  console.log('Live2D characters seeded (37 active + 1 inactive)')
 }
 
 main()
