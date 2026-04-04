@@ -184,12 +184,24 @@ const VRMCharacter = forwardRef<VRMCharacterHandle, VRMCharacterProps>(
           container.appendChild(renderer.domElement)
           rendererRef.current = renderer
 
-          // Lighting
-          const ambient = new THREE.AmbientLight(0xffffff, 0.8)
+          // Tone mapping for proper brightness
+          renderer.toneMapping = THREE.ACESFilmicToneMapping
+          renderer.toneMappingExposure = 1.2
+
+          // Lighting - bright enough to see character clearly
+          const ambient = new THREE.AmbientLight(0xffffff, 1.5)
           scene.add(ambient)
-          const directional = new THREE.DirectionalLight(0xffffff, 0.6)
+          const directional = new THREE.DirectionalLight(0xffffff, 1.2)
           directional.position.set(1, 2, 3)
           scene.add(directional)
+          // Fill light from opposite side to reduce dark shadows
+          const fillLight = new THREE.DirectionalLight(0xffffff, 0.6)
+          fillLight.position.set(-2, 1, -1)
+          scene.add(fillLight)
+          // Rim light from behind
+          const rimLight = new THREE.DirectionalLight(0xffffff, 0.4)
+          rimLight.position.set(0, 2, -3)
+          scene.add(rimLight)
 
           // OrbitControls for zoom/rotate
           const controls = new OrbitControls(camera, renderer.domElement)
