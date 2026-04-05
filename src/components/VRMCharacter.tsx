@@ -184,22 +184,27 @@ const VRMCharacter = forwardRef<VRMCharacterHandle, VRMCharacterProps>(
           container.appendChild(renderer.domElement)
           rendererRef.current = renderer
 
-          // Tone mapping for proper brightness
-          renderer.toneMapping = THREE.ACESFilmicToneMapping
-          renderer.toneMappingExposure = 1.2
+          // Tone mapping - use NoToneMapping for GLB to preserve original colors
+          // ACES can make models too dark
+          renderer.toneMapping = THREE.NoToneMapping
+          renderer.toneMappingExposure = 1.0
 
-          // Lighting - bright enough to see character clearly
-          const ambient = new THREE.AmbientLight(0xffffff, 1.5)
+          // Lighting - very bright to ensure character is clearly visible
+          const ambient = new THREE.AmbientLight(0xffffff, 2.5)
           scene.add(ambient)
-          const directional = new THREE.DirectionalLight(0xffffff, 1.2)
+          const directional = new THREE.DirectionalLight(0xffffff, 1.5)
           directional.position.set(1, 2, 3)
           scene.add(directional)
-          // Fill light from opposite side to reduce dark shadows
-          const fillLight = new THREE.DirectionalLight(0xffffff, 0.6)
+          // Fill light from opposite side
+          const fillLight = new THREE.DirectionalLight(0xffffff, 1.0)
           fillLight.position.set(-2, 1, -1)
           scene.add(fillLight)
+          // Bottom fill to eliminate shadows under chin/body
+          const bottomFill = new THREE.DirectionalLight(0xffffff, 0.8)
+          bottomFill.position.set(0, -1, 2)
+          scene.add(bottomFill)
           // Rim light from behind
-          const rimLight = new THREE.DirectionalLight(0xffffff, 0.4)
+          const rimLight = new THREE.DirectionalLight(0xffffff, 0.6)
           rimLight.position.set(0, 2, -3)
           scene.add(rimLight)
 
@@ -248,6 +253,17 @@ const VRMCharacter = forwardRef<VRMCharacterHandle, VRMCharacterProps>(
             // GLB model: plain glTF scene
             const model = gltf.scene
             glbModelRef.current = model
+
+            // Ensure materials are bright and well-lit
+            model.traverse((child: any) => {
+              if (child.isMesh && child.material) {
+                const mat = child.material
+                // Small emissive boost to prevent dark appearance
+                if (mat.emissive) mat.emissive.setScalar(0.08)
+                mat.needsUpdate = true
+              }
+            })
+
             // Auto-center and scale the model
             const box = new THREE.Box3().setFromObject(model)
             const size = new THREE.Vector3()
