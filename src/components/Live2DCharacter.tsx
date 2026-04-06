@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState, useCallback, forwardRef, useImperativeHandle } from 'react'
+import type { LipsyncState } from '@/lib/lipsync'
 
 interface Live2DCharacterProps {
   modelUrl?: string
@@ -15,6 +16,9 @@ export interface Live2DCharacterHandle {
   triggerMotion: (group: string, index?: number) => void
   getExpressions: () => string[]
   getMotionGroups: () => { name: string; count: number }[]
+  startLipsync: (audio: HTMLAudioElement) => void
+  stopLipsync: () => void
+  updateLipsync: (state: LipsyncState) => void
 }
 
 export interface ModelInfo {
@@ -42,6 +46,8 @@ function Live2DCharacter({ modelUrl, onZoomChange, onModelLoaded }, ref) {
   const sceneSizeRef = useRef({ w: 0, h: 0 })
   const dragFrameRef = useRef<number | null>(null)
   const pendingDragRef = useRef<{ x: number; y: number } | null>(null)
+  const lipsyncEngineRef = useRef<any>(null)
+  const mouthOpenRef = useRef(0)
   const dragRef = useRef({
     active: false,
     startX: 0,
@@ -356,6 +362,21 @@ function Live2DCharacter({ modelUrl, onZoomChange, onModelLoaded }, ref) {
         setMotionGroups(motGroups)
         onModelLoadedRef.current?.({ expressions: expNames, motionGroups: motGroups })
 
+        // Register lipsync hook on the model's update loop
+        if (model.internalModel) {
+          model.internalModel.on('beforeModelUpdate', () => {
+            const val = mouthOpenRef.current
+            if (val <= 0) return
+            const cm = model.internalModel.coreModel as any
+            if (!cm) return
+            if (cm.addParameterValueById) {
+              try { cm.addParameterValueById('ParamMouthOpenY', val) } catch {}
+            } else if (cm.setParamFloat) {
+              try { cm.setParamFloat('PARAM_MOUTH_OPEN_Y', val) } catch {}
+            }
+          })
+        }
+
         setIsLoading(false)
         setLoadProgress('')
       } catch (err: any) {
@@ -423,6 +444,31 @@ function Live2DCharacter({ modelUrl, onZoomChange, onModelLoaded }, ref) {
     return () => container.removeEventListener('wheel', handleWheel)
   }, [applyZoom])
 
+  // Lipsync: mouth open value is applied in the model's beforeModelUpdate event (registered after model load)
+
+  const startLipsync = useCallback((audio: HTMLAudioElement) => {
+    import('@/lib/lipsync').then(({ getLipsyncEngine }) => {
+      const engine = getLipsyncEngine()
+      lipsyncEngineRef.current = engine
+      engine.connectAudio(audio)
+      engine.setUpdateCallback((state: LipsyncState) => {
+        mouthOpenRef.current = state.mouthOpen
+      })
+    })
+  }, [])
+
+  const stopLipsync = useCallback(() => {
+    if (lipsyncEngineRef.current) {
+      lipsyncEngineRef.current.disconnect()
+      lipsyncEngineRef.current = null
+    }
+    mouthOpenRef.current = 0
+  }, [])
+
+  const updateLipsync = useCallback((state: LipsyncState) => {
+    mouthOpenRef.current = state.mouthOpen
+  }, [])
+
   useImperativeHandle(ref, () => ({
     triggerOutfitPreset,
     triggerActionPreset,
@@ -430,7 +476,10 @@ function Live2DCharacter({ modelUrl, onZoomChange, onModelLoaded }, ref) {
     triggerMotion,
     getExpressions: () => expressions,
     getMotionGroups: () => motionGroups,
-  }), [triggerOutfitPreset, triggerActionPreset, triggerExpression, triggerMotion, expressions, motionGroups])
+    startLipsync,
+    stopLipsync,
+    updateLipsync,
+  }), [triggerOutfitPreset, triggerActionPreset, triggerExpression, triggerMotion, expressions, motionGroups, startLipsync, stopLipsync, updateLipsync])
 
   return (
     <>

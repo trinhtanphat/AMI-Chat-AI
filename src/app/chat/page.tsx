@@ -83,17 +83,26 @@ export default function ChatPage() {
     if (status === 'unauthenticated') router.push('/login')
   }, [status, router])
 
-  // Expose lipsync controls for ChatMessage component
+  // Expose lipsync controls for ChatMessage component (works for both VRM and Live2D)
   useEffect(() => {
-    (window as any).__startLipsync = (audio: HTMLAudioElement) => vrmRef.current?.startLipsync(audio);
-    (window as any).__stopLipsync = () => vrmRef.current?.stopLipsync();
-    (window as any).__updateLipsync = (state: any) => vrmRef.current?.updateLipsync(state);
+    (window as any).__startLipsync = (audio: HTMLAudioElement) => {
+      if (is3D) vrmRef.current?.startLipsync(audio)
+      else live2dRef.current?.startLipsync(audio)
+    };
+    (window as any).__stopLipsync = () => {
+      if (is3D) vrmRef.current?.stopLipsync()
+      else live2dRef.current?.stopLipsync()
+    };
+    (window as any).__updateLipsync = (state: any) => {
+      if (is3D) vrmRef.current?.updateLipsync(state)
+      else live2dRef.current?.updateLipsync(state)
+    };
     return () => {
       delete (window as any).__startLipsync;
       delete (window as any).__stopLipsync;
       delete (window as any).__updateLipsync;
     }
-  }, [])
+  }, [is3D])
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
