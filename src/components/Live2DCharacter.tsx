@@ -279,6 +279,17 @@ function Live2DCharacter({ modelUrl, onZoomChange, onModelLoaded }, ref) {
 
         app.stage.addChild(model)
 
+        // Add beauty mark (nốt ruồi) for Mark character
+        if (url.toLowerCase().includes('/mark/')) {
+          const dot = new PIXI.Graphics()
+          dot.beginFill(0x2a1810, 0.9)
+          dot.drawCircle(0, 0, Math.max(3, modelW * 0.005))
+          dot.endFill()
+          dot.x = modelW * 0.58
+          dot.y = modelH * 0.285
+          model.addChild(dot)
+        }
+
         // Drag to move model position
         const onPointerDown = (e: PointerEvent) => {
           if (!containerRef.current || !modelRef.current) return
@@ -364,15 +375,46 @@ function Live2DCharacter({ modelUrl, onZoomChange, onModelLoaded }, ref) {
 
         // Register lipsync hook on the model's update loop
         if (model.internalModel) {
+          // Detect which mouth-open parameter name this model uses
+          const cm = model.internalModel.coreModel as any
+          const MOUTH_CANDIDATES = [
+            'ParamMouthOpenY', 'PARAM_MOUTH_OPEN_Y', 'MouthJawOpen',
+            'ParamMouthOpen', 'PARAM_MOUTH_OPEN',
+          ]
+          let detectedParams: string[] = []
+          let useMethod: 'addById' | 'setFloat' = 'addById'
+
+          if (cm?.addParameterValueById) {
+            // Cubism 4: enumerate actual parameter IDs
+            useMethod = 'addById'
+            const ids: string[] = cm._parameterIds || []
+            detectedParams = ids.filter((id: string) =>
+              /mouth.*open|jaw.*open/i.test(String(id))
+            )
+            if (detectedParams.length === 0) detectedParams = MOUTH_CANDIDATES
+          } else if (cm?.setParamFloat) {
+            // Cubism 2: try known names to find which exist
+            useMethod = 'setFloat'
+            for (const name of MOUTH_CANDIDATES) {
+              const idx = cm.getParamIndex?.(name) ?? -1
+              if (idx >= 0) { detectedParams.push(name); break }
+            }
+            if (detectedParams.length === 0) detectedParams = ['PARAM_MOUTH_OPEN_Y']
+          }
+
           model.internalModel.on('beforeModelUpdate', () => {
             const val = mouthOpenRef.current
             if (val <= 0) return
-            const cm = model.internalModel.coreModel as any
-            if (!cm) return
-            if (cm.addParameterValueById) {
-              try { cm.addParameterValueById('ParamMouthOpenY', val) } catch {}
-            } else if (cm.setParamFloat) {
-              try { cm.setParamFloat('PARAM_MOUTH_OPEN_Y', val) } catch {}
+            const cm2 = model.internalModel.coreModel as any
+            if (!cm2) return
+            if (useMethod === 'addById') {
+              for (const p of detectedParams) {
+                try { cm2.addParameterValueById(p, val) } catch {}
+              }
+            } else {
+              for (const p of detectedParams) {
+                try { cm2.setParamFloat(p, val) } catch {}
+              }
             }
           })
         }
