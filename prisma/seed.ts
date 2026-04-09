@@ -147,8 +147,8 @@ async function main() {
       { name: 'Toy Car (GLB)', modelUrl: '/models/3d/ToyCar.glb', category: '3d', sortOrder: 71 },
       // Custom generated character from image (TRELLIS AI)
       { name: 'My Character (GLB)', modelUrl: '/models/3d/MyCharacter.glb', category: '3d', sortOrder: 72 },
-      // Ami-PTIT character with lip sync support
-      { name: 'Ami-PTIT', modelUrl: '/models/Ami-PTIT/ptit_sdk.model3.json', category: 'anime', sortOrder: 0 },
+      // Ami-VNSO character with lip sync support
+      { name: 'Ami-VNSO', modelUrl: '/models/Ami-PTIT/ptit_sdk.model3.json', category: 'anime', sortOrder: 0 },
       // Ren is inactive (moc3 v6, needs Cubism SDK 5.x)
       { name: 'Ren (SDK5)', modelUrl: '/models/Ren/Ren.model3.json', category: 'anime', isActive: false, sortOrder: 99 },
     ],

@@ -140,11 +140,12 @@ export default function ChatInput({ onSend }: ChatInputProps) {
   }, [])
 
   return (
-    <div className="chat-input-area">
+    <div className="chat-input-area" data-tour="chat-input">
       <div className="chat-input-wrapper">
         {/* Mic button */}
         <button
           className="mic-btn"
+          data-tour="mic-btn"
           onClick={toggleRecording}
           disabled={isStreaming}
           title={isRecording ? 'Dừng ghi âm' : 'Nhập bằng giọng nói'}

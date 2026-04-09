@@ -8,6 +8,7 @@ import ChatInput from '@/components/ChatInput'
 import Live2DCharacter, { type Live2DCharacterHandle } from '@/components/Live2DCharacter'
 import VRMCharacter, { type VRMCharacterHandle } from '@/components/VRMCharacter'
 import SettingsPanel from '@/components/SettingsPanel'
+import WelcomeTutorial, { shouldShowTutorial } from '@/components/WelcomeTutorial'
 import { useChatStore } from '@/store/chat'
 
 interface Live2DChar {
@@ -54,6 +55,7 @@ export default function ChatPage() {
   const [followCursor, setFollowCursor] = useState(true)
   const [scrollZoom, setScrollZoom] = useState(true)
   const [charSearch, setCharSearch] = useState('')
+  const [showTutorial, setShowTutorial] = useState(false)
   const {
     messages,
     currentConversationId,
@@ -72,11 +74,64 @@ export default function ChatPage() {
     autoVoiceMode,
   } = useChatStore()
 
+  const streamLipsyncRef = useRef<number>(0)
+  const streamLipsyncActive = useRef(false)
+
+  // Streaming lipsync: animate character mouth while AI is typing
+  useEffect(() => {
+    if (isStreaming && streamingContent && !streamLipsyncActive.current) {
+      // Start animation when first content chunk arrives
+      streamLipsyncActive.current = true
+      const animate = () => {
+        if (!streamLipsyncActive.current) return
+        const now = Date.now()
+        // Natural talking pattern
+        const base = Math.sin(now * 0.012) * 0.3 + 0.4
+        const jitter = Math.sin(now * 0.031) * 0.15 + Math.sin(now * 0.019) * 0.1
+        const mouthOpen = Math.max(0, Math.min(1, base + jitter))
+        const state = {
+          volume: mouthOpen,
+          viseme: 'aa' as const,
+          mouthOpen,
+          values: {
+            aa: mouthOpen * 0.8,
+            ih: Math.max(0, Math.sin(now * 0.017) * 0.2),
+            ou: Math.max(0, Math.sin(now * 0.029) * 0.15),
+            ee: Math.max(0, Math.sin(now * 0.023) * 0.25),
+            oh: mouthOpen * 0.3,
+          },
+        }
+        if (is3D) vrmRef.current?.updateLipsync(state)
+        else live2dRef.current?.updateLipsync(state)
+        streamLipsyncRef.current = requestAnimationFrame(animate)
+      }
+      streamLipsyncRef.current = requestAnimationFrame(animate)
+    }
+
+    if (!isStreaming && streamLipsyncActive.current) {
+      // Stop streaming lipsync
+      streamLipsyncActive.current = false
+      if (streamLipsyncRef.current) {
+        cancelAnimationFrame(streamLipsyncRef.current)
+        streamLipsyncRef.current = 0
+      }
+      // Close mouth
+      const silState = { volume: 0, viseme: 'sil' as const, mouthOpen: 0, values: { aa: 0, ih: 0, ou: 0, ee: 0, oh: 0 } }
+      if (is3D) vrmRef.current?.updateLipsync(silState)
+      else live2dRef.current?.updateLipsync(silState)
+    }
+  }, [isStreaming, streamingContent, is3D])
+
   useEffect(() => {
     fetch('/api/settings').then(r => r.ok ? r.json() : {}).then((s: Record<string, string>) => {
       if (s.auto_voice_enabled === 'true') useChatStore.getState().setAutoVoiceMode(true)
       if (s.auto_voice_delay) useChatStore.getState().setAutoVoiceDelay(Number(s.auto_voice_delay) || 3)
     }).catch(() => {})
+  }, [])
+
+  // Show tutorial on first visit
+  useEffect(() => {
+    if (shouldShowTutorial()) setShowTutorial(true)
   }, [])
 
   useEffect(() => {
@@ -176,9 +231,19 @@ export default function ChatPage() {
   const autoPlayTTS = useCallback(async (text: string) => {
     const restartListening = () => {
       const fn = (window as any).__startVoiceRecording
-      if (fn) setTimeout(fn, 500)
+      if (autoVoiceMode && fn) setTimeout(fn, 500)
     }
 
+    const startCharLipsync = (audio: HTMLAudioElement) => {
+      if (is3D) vrmRef.current?.startLipsync(audio)
+      else live2dRef.current?.startLipsync(audio)
+    }
+    const stopCharLipsync = () => {
+      if (is3D) vrmRef.current?.stopLipsync()
+      else live2dRef.current?.stopLipsync()
+    }
+
+    // Try TTS API first
     try {
       const res = await fetch('/api/tts', {
         method: 'POST',
@@ -189,15 +254,16 @@ export default function ChatPage() {
         const blob = await res.blob()
         const url = URL.createObjectURL(blob)
         const audio = new Audio(url)
-        vrmRef.current?.startLipsync(audio)
-        audio.onended = () => { vrmRef.current?.stopLipsync(); URL.revokeObjectURL(url); restartListening() }
-        audio.onerror = () => { vrmRef.current?.stopLipsync(); URL.revokeObjectURL(url); browserTTSFallback(text, restartListening) }
+        startCharLipsync(audio)
+        audio.onended = () => { stopCharLipsync(); URL.revokeObjectURL(url); restartListening() }
+        audio.onerror = () => { stopCharLipsync(); URL.revokeObjectURL(url); browserTTSFallback(text, restartListening) }
         audio.play()
         return
       }
     } catch {}
+    // TTS API failed - use browser speech synthesis with lipsync
     browserTTSFallback(text, restartListening)
-  }, [])
+  }, [is3D, autoVoiceMode])
 
   const browserTTSFallback = (text: string, onDone: () => void) => {
     if (!('speechSynthesis' in window)) { onDone(); return }
@@ -209,16 +275,24 @@ export default function ChatPage() {
     const voices = window.speechSynthesis.getVoices()
     const preferred = voices.find(v => v.lang.startsWith('vi')) || voices.find(v => v.name.toLowerCase().includes('female'))
     if (preferred) utterance.voice = preferred
-    // Connect speech synthesis lipsync
-    if (vrmRef.current) {
+    // Connect speech synthesis lipsync for both VRM and Live2D
+    const hasChar = is3D ? vrmRef.current : live2dRef.current
+    if (hasChar) {
       import('@/lib/lipsync').then(({ getLipsyncEngine }) => {
         const engine = getLipsyncEngine()
-        engine.setUpdateCallback((state) => { vrmRef.current?.updateLipsync(state) })
+        engine.setUpdateCallback((state) => {
+          if (is3D) vrmRef.current?.updateLipsync(state)
+          else live2dRef.current?.updateLipsync(state)
+        })
         engine.connectSpeechSynthesis(utterance, text.slice(0, 2000))
       })
     }
-    utterance.onend = () => { vrmRef.current?.stopLipsync(); onDone() }
-    utterance.onerror = () => { vrmRef.current?.stopLipsync(); onDone() }
+    const stopChar = () => {
+      if (is3D) vrmRef.current?.stopLipsync()
+      else live2dRef.current?.stopLipsync()
+    }
+    utterance.onend = () => { stopChar(); onDone() }
+    utterance.onerror = () => { stopChar(); onDone() }
     window.speechSynthesis.speak(utterance)
   }
 
@@ -280,10 +354,8 @@ export default function ChatPage() {
       if (fullContent) {
         addMessage({ id: 'assistant-' + Date.now(), role: 'assistant', content: fullContent })
 
-        // Auto-voice: play TTS then restart listening
-        if (autoVoiceMode) {
-          autoPlayTTS(fullContent)
-        }
+        // Always play TTS with lipsync for AMI character response
+        autoPlayTTS(fullContent)
       }
 
       const convRes = await fetch('/api/conversations')
@@ -316,6 +388,9 @@ export default function ChatPage() {
 
   return (
     <div className="h-screen w-screen overflow-hidden relative">
+      {/* Welcome Tutorial */}
+      {showTutorial && <WelcomeTutorial onClose={() => setShowTutorial(false)} />}
+
       {/* Background */}
       <div className="scene-background" style={{ backgroundImage: `url(${BACKGROUNDS[bgIndex].src})` }} />
 
@@ -346,6 +421,7 @@ export default function ChatPage() {
       <button
         type="button"
         aria-label="Biểu cảm"
+        data-tour="expr-btn"
         onClick={() => setShowExprPanel(p => !p)}
         style={{
           position: 'fixed',
@@ -481,7 +557,7 @@ export default function ChatPage() {
       )}
 
       {/* Left Toolbar */}
-      <div className="left-toolbar">
+      <div className="left-toolbar" data-tour="toolbar">
         <button className="toolbar-btn" onClick={newChat} title="Chat mới">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M12 5v14M5 12h14" />
@@ -494,21 +570,21 @@ export default function ChatPage() {
           </svg>
         </button>
 
-        <button className={`toolbar-btn ${showBgSelector ? 'active' : ''}`} onClick={() => setShowBgSelector(!showBgSelector)} title="Đổi nền">
+        <button data-tour="bg-btn" className={`toolbar-btn ${showBgSelector ? 'active' : ''}`} onClick={() => setShowBgSelector(!showBgSelector)} title="Đổi nền">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><path d="m21 15-5-5L5 21" />
           </svg>
         </button>
 
         {characters.length > 0 && (
-          <button className={`toolbar-btn ${showCharSelector ? 'active' : ''}`} onClick={() => setShowCharSelector(!showCharSelector)} title="Đổi nhân vật">
+          <button data-tour="char-btn" className={`toolbar-btn ${showCharSelector ? 'active' : ''}`} onClick={() => setShowCharSelector(!showCharSelector)} title="Đổi nhân vật">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
             </svg>
           </button>
         )}
 
-        <button className={`toolbar-btn ${showSettings ? 'active' : ''}`} onClick={() => setShowSettings(true)} title="Cài đặt">
+        <button data-tour="settings-btn" className={`toolbar-btn ${showSettings ? 'active' : ''}`} onClick={() => setShowSettings(true)} title="Cài đặt">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M12.22 2h-.44a2 2 0 00-2 2v.18a2 2 0 01-1 1.73l-.43.25a2 2 0 01-2 0l-.15-.08a2 2 0 00-2.73.73l-.22.38a2 2 0 00.73 2.73l.15.1a2 2 0 011 1.72v.51a2 2 0 01-1 1.74l-.15.09a2 2 0 00-.73 2.73l.22.38a2 2 0 002.73.73l.15-.08a2 2 0 012 0l.43.25a2 2 0 011 1.73V20a2 2 0 002 2h.44a2 2 0 002-2v-.18a2 2 0 011-1.73l.43-.25a2 2 0 012 0l.15.08a2 2 0 002.73-.73l.22-.39a2 2 0 00-.73-2.73l-.15-.08a2 2 0 01-1-1.74v-.5a2 2 0 011-1.74l.15-.09a2 2 0 00.73-2.73l-.22-.38a2 2 0 00-2.73-.73l-.15.08a2 2 0 01-2 0l-.43-.25a2 2 0 01-1-1.73V4a2 2 0 00-2-2z" />
             <circle cx="12" cy="12" r="3" />
@@ -713,10 +789,10 @@ export default function ChatPage() {
       />
 
       {/* Chat Panel (floating right) */}
-      <div className="chat-panel">
+      <div className="chat-panel" data-tour="chat-panel">
         <div className="chat-header">
           <div>
-            <div className="chat-header-title">VNSO Chat AI</div>
+            <div className="chat-header-title">AMI Chat AI</div>
             <div className="chat-status">
               <span className="chat-status-dot" />
               {isStreaming ? 'Đang suy nghĩ...' : 'Trực tuyến'}
@@ -728,23 +804,24 @@ export default function ChatPage() {
           {messages.length === 0 && !isStreaming ? (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 16, padding: 24 }}>
               <div style={{
-                width: 64, height: 64, borderRadius: '50%',
-                background: 'linear-gradient(135deg, #667eea, #764ba2)',
+                width: 72, height: 72, borderRadius: '50%',
+                background: 'linear-gradient(135deg, #7c3aed, #a855f7, #ec4899)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 28
+                overflow: 'hidden',
+                boxShadow: '0 4px 20px rgba(139,92,246,0.4)',
               }}>
-                🤖
+                <img src="/assets/ami-avatar.png" alt="AMI" style={{ width: 64, height: 64, objectFit: 'cover', borderRadius: '50%' }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; (e.target as HTMLImageElement).parentElement!.innerHTML = '<span style=\"font-size:32px\">💜</span>' }} />
               </div>
               <div style={{ textAlign: 'center' }}>
                 <div style={{ fontSize: 16, fontWeight: 600, color: 'rgba(255,255,255,0.9)', marginBottom: 6 }}>
-                  Xin chào! Tôi là VNSO AI
+                  Xin chào! Tôi là AMI 💜
                 </div>
                 <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.45)', lineHeight: 1.5 }}>
                   Trợ lý AI của HQG VNSO. Hãy hỏi tôi bất cứ điều gì!
                 </div>
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center', marginTop: 8 }}>
-                {['VNSO là gì?', 'Viết code Python', 'Giải thích AI'].map((s, i) => (
+                {['AMI là ai?', 'VNSO là gì?', 'Giải thích AI'].map((s, i) => (
                   <button
                     key={i}
                     onClick={() => handleSend(s)}
@@ -793,7 +870,7 @@ export default function ChatPage() {
         <ChatInput onSend={handleSend} />
 
         <div className="chat-disclaimer">
-          VNSO AI có thể mắc lỗi. Hãy kiểm tra thông tin quan trọng.
+          AMI có thể mắc lỗi. Hãy kiểm tra thông tin quan trọng.
         </div>
       </div>
     </div>

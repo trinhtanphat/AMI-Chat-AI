@@ -123,7 +123,7 @@ export default function ChatMessage({ role, content, isStreaming }: ChatMessageP
       {/* Body */}
       <div className="msg-body">
         <div className="msg-header">
-          <span className="msg-name">{isUser ? 'Bạn' : 'VNSO AI'}</span>
+          <span className="msg-name">{isUser ? 'Bạn' : 'AMI'}</span>
           <span className="msg-time">{formatTime()}</span>
         </div>
 
