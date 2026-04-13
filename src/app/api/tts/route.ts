@@ -2,11 +2,21 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { checkRateLimit, RATE_LIMITS, getRateLimitHeaders } from '@/lib/rate-limit'
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  // Rate limiting
+  const rl = checkRateLimit(`tts:${session.user.id}`, RATE_LIMITS.tts)
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: 'Quá nhiều yêu cầu TTS. Vui lòng chờ.' },
+      { status: 429, headers: getRateLimitHeaders(rl.remaining, rl.resetAt) }
+    )
   }
 
   const { text } = await req.json()

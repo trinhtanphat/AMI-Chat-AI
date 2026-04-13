@@ -10,8 +10,15 @@ export default withAuth({
         return token?.role === 'admin'
       }
 
-      // Chat routes require authentication
-      if (path.startsWith('/chat') || path.startsWith('/api/chat') || path.startsWith('/api/conversations') || path.startsWith('/api/tts')) {
+      // Chat and user routes require authentication
+      if (
+        path.startsWith('/chat') ||
+        path.startsWith('/api/chat') ||
+        path.startsWith('/api/conversations') ||
+        path.startsWith('/api/tts') ||
+        path.startsWith('/api/memories') ||
+        path.startsWith('/api/profile')
+      ) {
         return !!token
       }
 
@@ -28,5 +35,7 @@ export const config = {
     '/api/conversations/:path*',
     '/api/tts/:path*',
     '/api/admin/:path*',
+    '/api/memories/:path*',
+    '/api/profile/:path*',
   ],
 }

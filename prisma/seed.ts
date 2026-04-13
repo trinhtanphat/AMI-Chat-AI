@@ -31,6 +31,10 @@ async function main() {
     { key: 'max_messages_per_conversation', value: '100' },
     { key: 'allow_registration', value: 'true' },
     { key: 'default_system_prompt', value: 'You are a helpful AI assistant. Answer questions accurately and helpfully.' },
+    { key: 'enable_memory_system', value: 'true' },
+    { key: 'enable_emotion_detection', value: 'true' },
+    { key: 'default_language', value: 'vi' },
+    { key: 'max_memories_per_user', value: '50' },
   ]
 
   for (const setting of defaults) {

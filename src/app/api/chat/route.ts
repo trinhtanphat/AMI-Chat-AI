@@ -3,6 +3,8 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { streamChatCompletion } from '@/lib/ai'
+import { checkRateLimit, RATE_LIMITS, getRateLimitHeaders } from '@/lib/rate-limit'
+import { sanitizeMessage } from '@/lib/sanitize'
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions)
@@ -10,10 +12,20 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
+  // Rate limiting
+  const rl = checkRateLimit(`chat:${session.user.id}`, RATE_LIMITS.chat)
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: 'Quá nhiều yêu cầu. Vui lòng chờ một chút.' },
+      { status: 429, headers: getRateLimitHeaders(rl.remaining, rl.resetAt) }
+    )
+  }
+
   try {
     const { message, conversationId, modelId } = await req.json()
 
-    if (!message?.trim()) {
+    const sanitizedMessage = sanitizeMessage(message)
+    if (!sanitizedMessage) {
       return NextResponse.json({ error: 'Message is required' }, { status: 400 })
     }
 
@@ -23,7 +35,7 @@ export async function POST(req: NextRequest) {
     if (!convId) {
       const conversation = await prisma.conversation.create({
         data: {
-          title: message.substring(0, 50) + (message.length > 50 ? '...' : ''),
+          title: sanitizedMessage.substring(0, 50) + (sanitizedMessage.length > 50 ? '...' : ''),
           userId: session.user.id,
           modelId,
         },
@@ -44,7 +56,7 @@ export async function POST(req: NextRequest) {
     await prisma.message.create({
       data: {
         role: 'user',
-        content: message,
+        content: sanitizedMessage,
         conversationId: convId,
         userId: session.user.id,
       },
@@ -59,8 +71,34 @@ export async function POST(req: NextRequest) {
 
     const messages = history.map((m) => ({ role: m.role, content: m.content }))
 
-    // Stream response from AI
-    const stream = await streamChatCompletion(messages, modelId || conversation.modelId || undefined)
+    // Load context in parallel for better performance
+    const [userMemories, character, user] = await Promise.all([
+      prisma.memory.findMany({
+        where: { userId: session.user.id },
+        orderBy: { updatedAt: 'desc' },
+        take: 10,
+      }),
+      conversation.characterId
+        ? prisma.live2DCharacter.findUnique({ where: { id: conversation.characterId } })
+        : null,
+      prisma.user.findUnique({
+        where: { id: session.user.id },
+        select: { customPrompt: true },
+      }),
+    ])
+
+    const characterPrompt = character?.personality || undefined
+
+    // Stream response from AI with memory and personality context
+    const stream = await streamChatCompletion(
+      messages,
+      modelId || conversation.modelId || undefined,
+      {
+        memories: userMemories.map(m => m.content),
+        characterPrompt,
+        userPrompt: user?.customPrompt || undefined,
+      }
+    )
 
     if (!stream) {
       throw new Error('No response stream from AI')
@@ -95,10 +133,17 @@ export async function POST(req: NextRequest) {
                   await prisma.conversation.update({
                     where: { id: convId },
                     data: {
-                      title: message.substring(0, 80) + (message.length > 80 ? '...' : ''),
+                      title: sanitizedMessage.substring(0, 80) + (sanitizedMessage.length > 80 ? '...' : ''),
                       updatedAt: new Date(),
                     },
                   })
+                }
+
+                // Extract and save memory facts from the conversation
+                try {
+                  await extractAndSaveMemories(session.user.id, sanitizedMessage, fullResponse)
+                } catch {
+                  // Non-critical: don't fail the request
                 }
               }
               controller.enqueue(encoder.encode(`data: [DONE]\n\n`))
@@ -140,5 +185,43 @@ export async function POST(req: NextRequest) {
       : msg.includes('Quá nhiều') || msg.includes('429') ? 429
       : 500
     return NextResponse.json({ error: msg }, { status })
+  }
+}
+
+/**
+ * Extract useful facts from conversation and save as memories
+ * Inspired by airi's memory system
+ */
+async function extractAndSaveMemories(userId: string, userMessage: string, aiResponse: string) {
+  // Simple fact extraction patterns
+  const patterns = [
+    // User self-introduction: "tôi là ...", "tên tôi là ..."
+    /(?:tôi là|tên tôi là|my name is|i am|i'm)\s+([^,.!?]+)/i,
+    // Preferences: "tôi thích ...", "i like ..."
+    /(?:tôi thích|tôi yêu thích|i like|i love|i prefer)\s+([^,.!?]+)/i,
+    // Location: "tôi ở ...", "i live in ..."
+    /(?:tôi ở|tôi sống ở|i live in|i'm from|i am from)\s+([^,.!?]+)/i,
+    // Job: "tôi làm ...", "i work as ..."
+    /(?:tôi làm|công việc của tôi|i work as|my job is|i'm a)\s+([^,.!?]+)/i,
+  ]
+
+  for (const pattern of patterns) {
+    const match = userMessage.match(pattern)
+    if (match?.[1]) {
+      const fact = match[0].trim()
+      // Check for duplicate
+      const existing = await prisma.memory.findFirst({
+        where: { userId, content: { contains: fact.substring(0, 50) } },
+      })
+      if (!existing) {
+        await prisma.memory.create({
+          data: {
+            userId,
+            type: 'fact',
+            content: fact,
+          },
+        })
+      }
+    }
   }
 }

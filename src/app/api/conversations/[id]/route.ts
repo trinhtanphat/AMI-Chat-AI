@@ -60,7 +60,7 @@ export async function PATCH(
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const { title } = await req.json()
+  const { title, isPinned } = await req.json()
 
   const conversation = await prisma.conversation.findFirst({
     where: { id: params.id, userId: session.user.id },
@@ -70,9 +70,13 @@ export async function PATCH(
     return NextResponse.json({ error: 'Not found' }, { status: 404 })
   }
 
+  const data: any = {}
+  if (title !== undefined) data.title = title
+  if (isPinned !== undefined) data.isPinned = isPinned
+
   const updated = await prisma.conversation.update({
     where: { id: params.id },
-    data: { title },
+    data,
   })
 
   return NextResponse.json(updated)

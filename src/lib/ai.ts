@@ -31,7 +31,12 @@ export async function getSystemPrompt() {
 
 export async function streamChatCompletion(
   messages: { role: string; content: string }[],
-  modelId?: string
+  modelId?: string,
+  context?: {
+    memories?: string[]
+    characterPrompt?: string
+    userPrompt?: string
+  }
 ) {
   const model = modelId
     ? await prisma.aiModel.findUnique({ where: { id: modelId }, include: { provider: true } })
@@ -47,8 +52,23 @@ export async function streamChatCompletion(
 
   const systemPrompt = await getSystemPrompt()
 
+  // Build enhanced system prompt with character personality and memories
+  let enhancedPrompt = systemPrompt
+
+  if (context?.characterPrompt) {
+    enhancedPrompt += `\n\nCharacter Personality: ${context.characterPrompt}`
+  }
+
+  if (context?.userPrompt) {
+    enhancedPrompt += `\n\nUser Custom Instructions: ${context.userPrompt}`
+  }
+
+  if (context?.memories && context.memories.length > 0) {
+    enhancedPrompt += `\n\nKnown facts about the user:\n${context.memories.map(m => `- ${m}`).join('\n')}`
+  }
+
   const allMessages = [
-    { role: 'system', content: systemPrompt },
+    { role: 'system', content: enhancedPrompt },
     ...messages,
   ]
 
@@ -67,22 +87,25 @@ export async function streamChatCompletion(
 
   if (!response.ok) {
     const errorText = await response.text()
-    console.error(`AI API error [${response.status}] from ${model.provider.name}:`, errorText)
+    console.error(`[SECURITY] AI API error [${response.status}] from ${model.provider.name}:`, errorText.substring(0, 500))
 
-    // Return user-friendly messages for common provider errors
+    // Return generic user-friendly messages - don't leak provider details
     switch (response.status) {
       case 401:
-        throw new Error('API key không hợp lệ hoặc đã hết hạn. Vui lòng liên hệ admin để cập nhật API key.')
+      case 403:
+        throw new Error('Xác thực AI thất bại. Vui lòng liên hệ admin.')
       case 402:
-        throw new Error('API key đã hết credit. Vui lòng chọn mô hình AI khác hoặc liên hệ admin để nạp thêm.')
+        throw new Error('Dịch vụ AI đã hết credit. Vui lòng chọn mô hình khác hoặc liên hệ admin.')
       case 429:
         throw new Error('Quá nhiều yêu cầu. Vui lòng chờ một chút rồi thử lại.')
       case 404:
-        throw new Error(`Mô hình "${model.modelId}" không tồn tại trên provider. Vui lòng chọn mô hình khác.`)
+        throw new Error('Mô hình AI không khả dụng. Vui lòng chọn mô hình khác.')
+      case 500:
+      case 502:
       case 503:
-        throw new Error('Dịch vụ AI đang bảo trì. Vui lòng thử lại sau.')
+        throw new Error('Dịch vụ AI tạm thời không khả dụng. Vui lòng thử lại sau.')
       default:
-        throw new Error(`Lỗi từ AI provider (${response.status}). Vui lòng thử mô hình khác hoặc liên hệ admin.`)
+        throw new Error('Không thể xử lý yêu cầu. Vui lòng thử lại.')
     }
   }
 

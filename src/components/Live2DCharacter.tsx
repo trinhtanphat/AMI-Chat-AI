@@ -57,6 +57,7 @@ function Live2DCharacter({ modelUrl, onZoomChange, onModelLoaded }, ref) {
   })
   const [isLoading, setIsLoading] = useState(true)
   const [loadProgress, setLoadProgress] = useState('')
+  const [loadPercent, setLoadPercent] = useState(0)
   const [error, setError] = useState<string | null>(null)
   const [zoom, setZoom] = useState(1)
   const [expressions, setExpressions] = useState<string[]>([])
@@ -197,6 +198,7 @@ function Live2DCharacter({ modelUrl, onZoomChange, onModelLoaded }, ref) {
         doInit()
       } else {
         setLoadProgress('Đang tải Live2D SDK...')
+        setLoadPercent(10)
         timerId = setTimeout(checkAndInit, 300)
       }
     }
@@ -209,6 +211,7 @@ function Live2DCharacter({ modelUrl, onZoomChange, onModelLoaded }, ref) {
         setIsLoading(true)
         setError(null)
         setLoadProgress('Đang khởi tạo...')
+        setLoadPercent(15)
 
         const PIXI = await import('pixi.js')
         if (cancelled) return
@@ -227,6 +230,7 @@ function Live2DCharacter({ modelUrl, onZoomChange, onModelLoaded }, ref) {
         sceneSizeRef.current = { w: width, h: height }
 
         setLoadProgress('Đang tạo canvas...')
+        setLoadPercent(30)
 
         const app = new PIXI.Application({
           width,
@@ -249,6 +253,7 @@ function Live2DCharacter({ modelUrl, onZoomChange, onModelLoaded }, ref) {
 
         const url = modelUrl || DEFAULT_MODEL_URL
         setLoadProgress('Đang tải model...')
+        setLoadPercent(40)
 
         const model = await Live2DModel.from(url, {
           autoHitTest: true,
@@ -260,6 +265,7 @@ function Live2DCharacter({ modelUrl, onZoomChange, onModelLoaded }, ref) {
         modelRef.current = model
 
         setLoadProgress('Đang render nhân vật...')
+        setLoadPercent(80)
 
         const modelH = model.height
         const modelW = model.width
@@ -419,6 +425,7 @@ function Live2DCharacter({ modelUrl, onZoomChange, onModelLoaded }, ref) {
           })
         }
 
+        setLoadPercent(100)
         setIsLoading(false)
         setLoadProgress('')
       } catch (err: any) {
@@ -644,18 +651,26 @@ function Live2DCharacter({ modelUrl, onZoomChange, onModelLoaded }, ref) {
             </svg>
             <span style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22 }}>🎭</span>
           </div>
+          {/* Progress bar */}
+          <div style={{
+            width: 200, height: 6, borderRadius: 3,
+            background: 'rgba(255,255,255,0.1)',
+            overflow: 'hidden',
+          }}>
+            <div style={{
+              height: '100%', borderRadius: 3,
+              background: 'linear-gradient(90deg, #818cf8, #c084fc)',
+              width: `${loadPercent}%`,
+              transition: 'width 0.4s ease-out',
+            }} />
+          </div>
           <div style={{
             padding: '6px 16px', borderRadius: 12,
             background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(8px)',
             color: 'rgba(255,255,255,0.6)', fontSize: 13,
             display: 'flex', alignItems: 'center', gap: 4,
           }}>
-            {loadProgress || 'Đang tải nhân vật'}
-            <span style={{ display: 'inline-flex', gap: 2 }}>
-              <span className="animate-bounce" style={{ animationDelay: '0ms' }}>.</span>
-              <span className="animate-bounce" style={{ animationDelay: '150ms' }}>.</span>
-              <span className="animate-bounce" style={{ animationDelay: '300ms' }}>.</span>
-            </span>
+            {loadProgress || 'Đang tải nhân vật'} {loadPercent > 0 && <span style={{ fontWeight: 600, color: 'rgba(255,255,255,0.8)' }}>{loadPercent}%</span>}
           </div>
         </div>
       )}

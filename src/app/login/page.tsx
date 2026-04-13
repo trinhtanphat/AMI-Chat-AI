@@ -152,7 +152,13 @@ function LoginContent() {
             </button>
           </form>
 
-          <div className="mt-6 text-center">
+          <div className="mt-4 text-center">
+            <Link href="/reset-password" className="text-sm text-white/40 hover:text-indigo-300 transition-colors">
+              Quên mật khẩu?
+            </Link>
+          </div>
+
+          <div className="mt-4 text-center">
             <p className="text-white/35 text-sm">
               Chưa có tài khoản?{' '}
               <Link href="/register" className="text-indigo-400 hover:text-indigo-300 font-medium transition-colors">

@@ -15,6 +15,10 @@ const ALLOWED_SETTINGS = new Set([
   'tts_speed',
   'auto_voice_enabled',
   'auto_voice_delay',
+  'enable_memory_system',
+  'enable_emotion_detection',
+  'default_language',
+  'max_memories_per_user',
 ])
 const MAX_VALUE_LENGTH = 5000
 

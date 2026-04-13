@@ -14,11 +14,16 @@ model User {
   password      String
   role          String         @default("user") // "user" | "admin"
   avatar        String?
+  bio           String?
+  language      String         @default("vi") // "vi" | "en"
+  customPrompt  String?        // Per-user custom system prompt
   isActive      Boolean        @default(true)
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
   conversations Conversation[]
   messages      Message[]
+  passwordResets PasswordReset[]
+  memories       Memory[]
 }
 
 model Conversation {
@@ -27,9 +32,14 @@ model Conversation {
   userId    String
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   modelId   String?
+  characterId String? // Link to character for personality
+  isPinned  Boolean   @default(false)
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   messages  Message[]
+
+  @@index([userId, updatedAt])
+  @@index([userId, isPinned])
 }
 
 model Message {
@@ -41,6 +51,8 @@ model Message {
   userId         String?
   user           User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
   createdAt      DateTime     @default(now())
+
+  @@index([conversationId, createdAt])
 }
 
 model AiProvider {
@@ -73,14 +85,55 @@ model SystemSetting {
 }
 
 model Live2DCharacter {
-  id        String  @id @default(cuid())
-  name      String
-  modelUrl  String
-  thumbnail String?
-  category  String  @default("default") // "default" | "anime" | "chibi" | "mascot"
-  isActive  Boolean @default(true)
-  isDefault Boolean @default(false)
-  sortOrder Int     @default(0)
+  id            String  @id @default(cuid())
+  name          String
+  modelUrl      String
+  thumbnail     String?
+  category      String  @default("default") // "default" | "anime" | "chibi" | "mascot"
+  personality   String? // Character personality prompt
+  greeting      String? // Custom greeting message
+  isActive      Boolean @default(true)
+  isDefault     Boolean @default(false)
+  sortOrder     Int     @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+// Password reset tokens
+model PasswordReset {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+// Memory system - stores per-user conversation context and facts
+model Memory {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String   @default("fact") // "fact" | "preference" | "context"
+  content   String
+  metadata  String?  // JSON metadata
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([userId, updatedAt])
+}
+
+// Audit log for admin actions
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  action    String   // e.g., "login", "settings_change", "user_create"
+  details   String?
+  ipAddress String?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
 }

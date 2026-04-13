@@ -13,8 +13,16 @@ interface Conversation {
   id: string
   title: string
   modelId?: string
+  isPinned?: boolean
   updatedAt: string
   messages?: Message[]
+}
+
+interface Memory {
+  id: string
+  type: string
+  content: string
+  updatedAt: string
 }
 
 interface ChatState {
@@ -26,6 +34,10 @@ interface ChatState {
   selectedModelId: string | null
   autoVoiceMode: boolean
   autoVoiceDelay: number
+  searchQuery: string
+  currentEmotion: string
+  locale: 'vi' | 'en'
+  memories: Memory[]
 
   setConversations: (conversations: Conversation[]) => void
   setCurrentConversation: (id: string | null) => void
@@ -38,6 +50,11 @@ interface ChatState {
   removeConversation: (id: string) => void
   setAutoVoiceMode: (on: boolean) => void
   setAutoVoiceDelay: (delay: number) => void
+  setSearchQuery: (query: string) => void
+  setCurrentEmotion: (emotion: string) => void
+  setLocale: (locale: 'vi' | 'en') => void
+  togglePinConversation: (id: string) => void
+  setMemories: (memories: Memory[]) => void
 }
 
 export const useChatStore = create<ChatState>((set) => ({
@@ -49,6 +66,10 @@ export const useChatStore = create<ChatState>((set) => ({
   selectedModelId: null,
   autoVoiceMode: false,
   autoVoiceDelay: 2,
+  searchQuery: '',
+  currentEmotion: 'neutral',
+  locale: (typeof window !== 'undefined' ? (localStorage.getItem('ami.locale') as 'vi' | 'en') : null) || 'vi',
+  memories: [],
 
   setConversations: (conversations) => set({ conversations }),
   setCurrentConversation: (id) => set({ currentConversationId: id }),
@@ -67,4 +88,19 @@ export const useChatStore = create<ChatState>((set) => ({
     })),
   setAutoVoiceMode: (on) => set({ autoVoiceMode: on }),
   setAutoVoiceDelay: (delay) => set({ autoVoiceDelay: delay }),
+  setSearchQuery: (query) => set({ searchQuery: query }),
+  setCurrentEmotion: (emotion) => set({ currentEmotion: emotion }),
+  setLocale: (locale) => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('ami.locale', locale)
+    }
+    set({ locale })
+  },
+  togglePinConversation: (id) =>
+    set((state) => ({
+      conversations: state.conversations.map((c) =>
+        c.id === id ? { ...c, isPinned: !c.isPinned } : c
+      ),
+    })),
+  setMemories: (memories) => set({ memories }),
 }))

@@ -10,6 +10,8 @@ import VRMCharacter, { type VRMCharacterHandle } from '@/components/VRMCharacter
 import SettingsPanel from '@/components/SettingsPanel'
 import WelcomeTutorial, { shouldShowTutorial } from '@/components/WelcomeTutorial'
 import { useChatStore } from '@/store/chat'
+import { detectEmotion, emotionToVRMExpression } from '@/lib/emotions'
+import { t, getLocale, setLocale as setI18nLocale } from '@/lib/i18n'
 
 interface Live2DChar {
   id: string
@@ -72,7 +74,16 @@ export default function ChatPage() {
     setConversations,
     removeConversation,
     autoVoiceMode,
+    searchQuery,
+    setSearchQuery,
+    currentEmotion,
+    setCurrentEmotion,
+    locale,
+    setLocale,
+    togglePinConversation,
   } = useChatStore()
+
+  const [convSearchInput, setConvSearchInput] = useState('')
 
   const streamLipsyncRef = useRef<number>(0)
   const streamLipsyncActive = useRef(false)
@@ -164,7 +175,7 @@ export default function ChatPage() {
   }, [messages, streamingContent])
 
   useEffect(() => {
-    fetch('/api/conversations').then(r => r.ok ? r.json() : []).then(setConversations).catch(() => {})
+    fetch('/api/conversations').then(r => r.ok ? r.json() : { data: [] }).then(res => setConversations(res.data || res)).catch(() => {})
   }, [setConversations])
 
   useEffect(() => {
@@ -225,6 +236,36 @@ export default function ChatPage() {
     try {
       const res = await fetch(`/api/conversations/${id}`, { method: 'DELETE' })
       if (res.ok) removeConversation(id)
+    } catch {}
+  }
+
+  const handlePinConversation = async (id: string, isPinned: boolean) => {
+    try {
+      const res = await fetch(`/api/conversations/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isPinned }),
+      })
+      if (res.ok) {
+        togglePinConversation(id)
+      }
+    } catch {}
+  }
+
+  const handleExportConversation = async (id: string) => {
+    try {
+      const res = await fetch(`/api/conversations/${id}/export?format=markdown`)
+      if (res.ok) {
+        const blob = await res.blob()
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `chat-${id}.md`
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        URL.revokeObjectURL(url)
+      }
     } catch {}
   }
 
@@ -354,12 +395,22 @@ export default function ChatPage() {
       if (fullContent) {
         addMessage({ id: 'assistant-' + Date.now(), role: 'assistant', content: fullContent })
 
+        // Detect emotion from AI response and trigger character expression
+        const emotion = detectEmotion(fullContent)
+        setCurrentEmotion(emotion)
+        if (is3D) {
+          vrmRef.current?.triggerEmotion(emotionToVRMExpression(emotion))
+        }
+
         // Always play TTS with lipsync for AMI character response
         autoPlayTTS(fullContent)
       }
 
       const convRes = await fetch('/api/conversations')
-      if (convRes.ok) setConversations(await convRes.json())
+      if (convRes.ok) {
+        const convData = await convRes.json()
+        setConversations(convData.data || convData)
+      }
     } catch (error: any) {
       addMessage({ id: 'error-' + Date.now(), role: 'assistant', content: `⚠️ Lỗi: ${error.message}` })
     } finally {
@@ -606,39 +657,79 @@ export default function ChatPage() {
       <div className={`conv-sidebar ${sidebarOpen ? 'open' : ''}`}>
         <div className="conv-sidebar-header">
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontWeight: 600, fontSize: 15, color: 'rgba(255,255,255,0.9)' }}>Lịch sử chat</span>
+            <span style={{ fontWeight: 600, fontSize: 15, color: 'rgba(255,255,255,0.9)' }}>{t('chat.history', locale)}</span>
             <button className="toolbar-btn" onClick={() => setSidebarOpen(false)} style={{ width: 28, height: 28 }}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M18 6 6 18M6 6l12 12" />
               </svg>
             </button>
           </div>
+          {/* Search conversations */}
+          <input
+            type="text"
+            value={convSearchInput}
+            onChange={(e) => setConvSearchInput(e.target.value)}
+            placeholder={t('chat.search', locale)}
+            style={{
+              width: '100%', marginTop: 8, padding: '6px 10px', fontSize: 12, borderRadius: 8,
+              border: '1px solid rgba(255,255,255,0.15)', background: 'rgba(255,255,255,0.08)',
+              color: '#fff', outline: 'none',
+            }}
+          />
         </div>
         <div className="conv-list">
           {conversations.length === 0 ? (
             <div style={{ textAlign: 'center', color: 'rgba(255,255,255,0.3)', fontSize: 13, padding: '32px 16px' }}>
-              Chưa có cuộc trò chuyện
+              {t('chat.noConversations', locale)}
             </div>
-          ) : conversations.map(conv => (
+          ) : conversations
+            .filter(conv => !convSearchInput || conv.title.toLowerCase().includes(convSearchInput.toLowerCase()))
+            .map(conv => (
             <div
               key={conv.id}
               className={`conv-item ${currentConversationId === conv.id ? 'active' : ''}`}
               onClick={() => selectConversation(conv.id)}
             >
+              {conv.isPinned && <span style={{ fontSize: 10, marginRight: 4 }}>📌</span>}
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ flexShrink: 0 }}>
                 <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
               </svg>
               <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{conv.title}</span>
-              <button
-                onClick={(e) => deleteConversation(e, conv.id)}
-                style={{ opacity: 0, transition: 'opacity 0.15s', padding: 4, borderRadius: 4, background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', cursor: 'pointer' }}
-                onMouseEnter={(e) => { (e.target as HTMLElement).style.opacity = '1' }}
-                onMouseLeave={(e) => { (e.target as HTMLElement).style.opacity = '0' }}
+              <div style={{ display: 'flex', gap: 2, opacity: 0, transition: 'opacity 0.15s' }}
+                onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.opacity = '1' }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.opacity = '0' }}
               >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21A48.108 48.108 0 0015.75 5.4m-12 .562A48.11 48.11 0 017.25 5.4m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
-                </svg>
-              </button>
+                {/* Pin button */}
+                <button
+                  onClick={(e) => { e.stopPropagation(); handlePinConversation(conv.id, !conv.isPinned) }}
+                  style={{ padding: 4, borderRadius: 4, background: 'none', border: 'none', color: conv.isPinned ? '#818cf8' : 'rgba(255,255,255,0.4)', cursor: 'pointer' }}
+                  title={conv.isPinned ? t('chat.unpin', locale) : t('chat.pin', locale)}
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill={conv.isPinned ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2">
+                    <path d="M12 2L12 22M17 7L12 2L7 7" />
+                  </svg>
+                </button>
+                {/* Export button */}
+                <button
+                  onClick={(e) => { e.stopPropagation(); handleExportConversation(conv.id) }}
+                  style={{ padding: 4, borderRadius: 4, background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', cursor: 'pointer' }}
+                  title={t('chat.export', locale)}
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" />
+                  </svg>
+                </button>
+                {/* Delete button */}
+                <button
+                  onClick={(e) => deleteConversation(e, conv.id)}
+                  style={{ padding: 4, borderRadius: 4, background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', cursor: 'pointer' }}
+                  title={t('common.delete', locale)}
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21A48.108 48.108 0 0015.75 5.4m-12 .562A48.11 48.11 0 017.25 5.4m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+                  </svg>
+                </button>
+              </div>
             </div>
           ))}
         </div>
@@ -756,6 +847,18 @@ export default function ChatPage() {
                 </button>
               ))}
               <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }} />
+              {/* Language switcher */}
+              <div className="user-dropdown-item" style={{ display: 'flex', gap: 8 }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <circle cx="12" cy="12" r="10" /><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+                </svg>
+                <button
+                  onClick={() => { setLocale(locale === 'vi' ? 'en' : 'vi'); setI18nLocale(locale === 'vi' ? 'en' : 'vi') }}
+                  style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.8)', cursor: 'pointer', fontSize: 13 }}
+                >
+                  {locale === 'vi' ? '🇻🇳 Tiếng Việt → 🇺🇸 English' : '🇺🇸 English → 🇻🇳 Tiếng Việt'}
+                </button>
+              </div>
               {session?.user?.role === 'admin' && (
                 <a href="/admin" className="user-dropdown-item">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -768,7 +871,7 @@ export default function ChatPage() {
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" />
                 </svg>
-                Đăng xuất
+                {t('auth.logout', locale)}
               </button>
             </div>
           </>
@@ -792,10 +895,15 @@ export default function ChatPage() {
       <div className="chat-panel" data-tour="chat-panel">
         <div className="chat-header">
           <div>
-            <div className="chat-header-title">AMI Chat AI</div>
+            <div className="chat-header-title">{t('chat.title', locale)}</div>
             <div className="chat-status">
               <span className="chat-status-dot" />
-              {isStreaming ? 'Đang suy nghĩ...' : 'Trực tuyến'}
+              {isStreaming ? t('chat.thinking', locale) : t('chat.online', locale)}
+              {currentEmotion !== 'neutral' && (
+                <span style={{ marginLeft: 8, fontSize: 11, opacity: 0.7 }}>
+                  {currentEmotion === 'happy' ? '😊' : currentEmotion === 'sad' ? '😢' : currentEmotion === 'angry' ? '😠' : currentEmotion === 'surprised' ? '😲' : currentEmotion === 'thinking' ? '🤔' : currentEmotion === 'fun' ? '🎉' : currentEmotion === 'relaxed' ? '😌' : ''}
+                </span>
+              )}
             </div>
           </div>
         </div>
@@ -810,14 +918,14 @@ export default function ChatPage() {
                 overflow: 'hidden',
                 boxShadow: '0 4px 20px rgba(139,92,246,0.4)',
               }}>
-                <img src="/assets/ami-avatar.png" alt="AMI" style={{ width: 64, height: 64, objectFit: 'cover', borderRadius: '50%' }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; (e.target as HTMLImageElement).parentElement!.innerHTML = '<span style=\"font-size:32px\">💜</span>' }} />
+                <img src="/assets/ami-avatar.png" alt="AMI" style={{ width: 64, height: 64, objectFit: 'cover', borderRadius: '50%' }} onError={(e) => { const img = e.target as HTMLImageElement; img.style.display = 'none'; const span = document.createElement('span'); span.style.fontSize = '32px'; span.textContent = '💜'; img.parentElement?.appendChild(span) }} />
               </div>
               <div style={{ textAlign: 'center' }}>
                 <div style={{ fontSize: 16, fontWeight: 600, color: 'rgba(255,255,255,0.9)', marginBottom: 6 }}>
-                  Xin chào! Tôi là AMI 💜
+                  {t('chat.hello', locale)}
                 </div>
                 <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.45)', lineHeight: 1.5 }}>
-                  Trợ lý AI của HQG VNSO. Hãy hỏi tôi bất cứ điều gì!
+                  {t('chat.intro', locale)}
                 </div>
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center', marginTop: 8 }}>
@@ -854,7 +962,7 @@ export default function ChatPage() {
                       <svg className="animate-spin" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                         <path d="M21 12a9 9 0 11-6.219-8.56" />
                       </svg>
-                      Đang suy nghĩ...
+                      {t('chat.thinking', locale)}
                     </div>
                     <div className="typing-indicator">
                       <span /><span /><span />
@@ -870,7 +978,7 @@ export default function ChatPage() {
         <ChatInput onSend={handleSend} />
 
         <div className="chat-disclaimer">
-          AMI có thể mắc lỗi. Hãy kiểm tra thông tin quan trọng.
+          {t('chat.disclaimer', locale)}
         </div>
       </div>
     </div>

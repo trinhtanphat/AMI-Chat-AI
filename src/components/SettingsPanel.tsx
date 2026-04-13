@@ -1,6 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useChatStore } from '@/store/chat'
+import { t, setLocale as setI18nLocale, type Locale } from '@/lib/i18n'
 
 interface SettingsPanelProps {
   open: boolean
@@ -14,7 +16,7 @@ interface SettingsPanelProps {
   onScrollZoomChange: (v: boolean) => void
 }
 
-type Tab = 'general' | 'ami' | 'feedback' | 'about'
+type Tab = 'general' | 'profile' | 'memory' | 'ami' | 'feedback' | 'about'
 
 export default function SettingsPanel({
   open, onClose, bgIndex, onBgChange, backgrounds,
@@ -27,14 +29,117 @@ export default function SettingsPanel({
   const [feedbackMsg, setFeedbackMsg] = useState('')
   const [feedbackSent, setFeedbackSent] = useState(false)
 
+  // Profile state
+  const [profileName, setProfileName] = useState('')
+  const [profileBio, setProfileBio] = useState('')
+  const [customPrompt, setCustomPrompt] = useState('')
+  const [currentPassword, setCurrentPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [profileSaving, setProfileSaving] = useState(false)
+  const [profileMsg, setProfileMsg] = useState('')
+
+  // Memory state
+  const { memories, setMemories, locale, setLocale } = useChatStore()
+  const [newMemory, setNewMemory] = useState('')
+  const [memoryLoading, setMemoryLoading] = useState(false)
+
+  // Load profile data
+  useEffect(() => {
+    if (open && (tab === 'profile' || tab === 'general')) {
+      fetch('/api/profile').then(r => r.ok ? r.json() : null).then(data => {
+        if (data) {
+          setProfileName(data.name || '')
+          setProfileBio(data.bio || '')
+          setCustomPrompt(data.customPrompt || '')
+        }
+      }).catch(() => {})
+    }
+  }, [open, tab])
+
+  // Load memories
+  useEffect(() => {
+    if (open && tab === 'memory') {
+      setMemoryLoading(true)
+      fetch('/api/memories').then(r => r.ok ? r.json() : []).then(data => {
+        if (Array.isArray(data)) setMemories(data)
+      }).catch(() => {}).finally(() => setMemoryLoading(false))
+    }
+  }, [open, tab, setMemories])
+
   if (!open) return null
 
   const tabs: { id: Tab; label: string; icon: string }[] = [
-    { id: 'general', label: 'Chung', icon: '⚙️' },
+    { id: 'general', label: t('settings.general', locale), icon: '⚙️' },
+    { id: 'profile', label: t('settings.profile', locale), icon: '👤' },
+    { id: 'memory', label: t('settings.memory', locale), icon: '🧠' },
     { id: 'ami', label: 'Ami', icon: '🎭' },
-    { id: 'feedback', label: 'Góp ý', icon: '💬' },
-    { id: 'about', label: 'Thông tin', icon: 'ℹ️' },
+    { id: 'feedback', label: t('settings.feedback', locale), icon: '💬' },
+    { id: 'about', label: t('settings.about', locale), icon: 'ℹ️' },
   ]
+
+  const handleProfileSave = async () => {
+    setProfileSaving(true)
+    setProfileMsg('')
+    try {
+      const body: any = { name: profileName, bio: profileBio, customPrompt }
+      if (newPassword) {
+        body.currentPassword = currentPassword
+        body.newPassword = newPassword
+      }
+      const res = await fetch('/api/profile', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      const data = await res.json()
+      if (res.ok) {
+        setProfileMsg('✅ ' + t('common.success', locale))
+        setCurrentPassword('')
+        setNewPassword('')
+      } else {
+        setProfileMsg('❌ ' + (data.error || t('common.error', locale)))
+      }
+    } catch {
+      setProfileMsg('❌ ' + t('common.error', locale))
+    } finally {
+      setProfileSaving(false)
+      setTimeout(() => setProfileMsg(''), 3000)
+    }
+  }
+
+  const handleAddMemory = async () => {
+    if (!newMemory.trim()) return
+    try {
+      const res = await fetch('/api/memories', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: newMemory, type: 'fact' }),
+      })
+      if (res.ok) {
+        const memory = await res.json()
+        setMemories([memory, ...memories])
+        setNewMemory('')
+      }
+    } catch {}
+  }
+
+  const handleDeleteMemory = async (id: string) => {
+    try {
+      const res = await fetch('/api/memories', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      })
+      if (res.ok) {
+        setMemories(memories.filter(m => m.id !== id))
+      }
+    } catch {}
+  }
+
+  const handleLanguageChange = (newLocale: Locale) => {
+    setLocale(newLocale)
+    setI18nLocale(newLocale)
+  }
 
   const handleFeedbackSubmit = async () => {
     if (!feedbackMsg.trim()) return
@@ -74,7 +179,7 @@ export default function SettingsPanel({
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           padding: '16px 20px', borderBottom: '1px solid rgba(255,255,255,0.06)',
         }}>
-          <span style={{ fontSize: 16, fontWeight: 700, color: 'rgba(255,255,255,0.9)' }}>Cài đặt</span>
+          <span style={{ fontSize: 16, fontWeight: 700, color: 'rgba(255,255,255,0.9)' }}>{t('settings.title', locale)}</span>
           <button onClick={onClose} style={{
             width: 28, height: 28, borderRadius: '50%', border: 'none',
             background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.5)',
@@ -143,8 +248,11 @@ export default function SettingsPanel({
                 </div>
               </div>
               <div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.7)', marginBottom: 10 }}>🌐 Ngôn ngữ</div>
-                <select style={{
+                <div style={{ fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.7)', marginBottom: 10 }}>🌐 {t('settings.language', locale)}</div>
+                <select
+                  value={locale}
+                  onChange={e => handleLanguageChange(e.target.value as Locale)}
+                  style={{
                   ...inputStyle, cursor: 'pointer',
                   appearance: 'none',
                   backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.4)' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")`,
@@ -152,9 +260,122 @@ export default function SettingsPanel({
                 }}>
                   <option value="vi">🇻🇳 Tiếng Việt</option>
                   <option value="en">🇺🇸 English</option>
-                  <option value="ja">🇯🇵 日本語</option>
                 </select>
               </div>
+            </div>
+          )}
+
+          {/* Tab: Profile */}
+          {tab === 'profile' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              {profileMsg && (
+                <div style={{
+                  padding: '8px 12px', borderRadius: 8, fontSize: 13,
+                  background: profileMsg.startsWith('✅') ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)',
+                  border: `1px solid ${profileMsg.startsWith('✅') ? 'rgba(34,197,94,0.2)' : 'rgba(239,68,68,0.2)'}`,
+                  color: profileMsg.startsWith('✅') ? '#86efac' : '#fca5a5',
+                }}>
+                  {profileMsg}
+                </div>
+              )}
+              <div>
+                <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginBottom: 4 }}>{t('profile.name', locale)}</div>
+                <input value={profileName} onChange={e => setProfileName(e.target.value)} style={inputStyle}
+                  onFocus={e => (e.target.style.borderColor = 'rgba(99,102,241,0.5)')}
+                  onBlur={e => (e.target.style.borderColor = 'rgba(255,255,255,0.1)')} />
+              </div>
+              <div>
+                <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginBottom: 4 }}>{t('profile.bio', locale)}</div>
+                <textarea value={profileBio} onChange={e => setProfileBio(e.target.value)} rows={2}
+                  style={{ ...inputStyle, resize: 'vertical' }} placeholder="..."
+                  onFocus={e => (e.target.style.borderColor = 'rgba(99,102,241,0.5)')}
+                  onBlur={e => (e.target.style.borderColor = 'rgba(255,255,255,0.1)')} />
+              </div>
+              <div>
+                <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginBottom: 4 }}>{t('profile.customPrompt', locale)}</div>
+                <textarea value={customPrompt} onChange={e => setCustomPrompt(e.target.value)} rows={3}
+                  style={{ ...inputStyle, resize: 'vertical' }}
+                  placeholder={locale === 'vi' ? 'VD: Hãy trả lời ngắn gọn và thân thiện...' : 'E.g.: Please respond briefly and friendly...'}
+                  onFocus={e => (e.target.style.borderColor = 'rgba(99,102,241,0.5)')}
+                  onBlur={e => (e.target.style.borderColor = 'rgba(255,255,255,0.1)')} />
+              </div>
+              <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 14 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.7)', marginBottom: 10 }}>🔒 {t('profile.changePassword', locale)}</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <input type="password" value={currentPassword} onChange={e => setCurrentPassword(e.target.value)}
+                    placeholder={t('profile.currentPassword', locale)} style={inputStyle}
+                    onFocus={e => (e.target.style.borderColor = 'rgba(99,102,241,0.5)')}
+                    onBlur={e => (e.target.style.borderColor = 'rgba(255,255,255,0.1)')} />
+                  <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)}
+                    placeholder={t('profile.newPassword', locale)} style={inputStyle}
+                    onFocus={e => (e.target.style.borderColor = 'rgba(99,102,241,0.5)')}
+                    onBlur={e => (e.target.style.borderColor = 'rgba(255,255,255,0.1)')} />
+                </div>
+              </div>
+              <button onClick={handleProfileSave} disabled={profileSaving} style={{
+                padding: '10px 16px', borderRadius: 10, border: 'none',
+                background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                color: '#fff', cursor: profileSaving ? 'wait' : 'pointer',
+                fontSize: 13, fontWeight: 600, transition: 'all 0.15s',
+                opacity: profileSaving ? 0.6 : 1,
+              }}>
+                {profileSaving ? t('common.loading', locale) : t('profile.save', locale)}
+              </button>
+            </div>
+          )}
+
+          {/* Tab: Memory */}
+          {tab === 'memory' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', lineHeight: 1.5 }}>
+                🧠 {t('memory.description', locale)}
+              </div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <input value={newMemory} onChange={e => setNewMemory(e.target.value)}
+                  placeholder={locale === 'vi' ? 'VD: Tôi thích trà sữa...' : 'E.g.: I like bubble tea...'}
+                  style={{ ...inputStyle, flex: 1 }}
+                  onFocus={e => (e.target.style.borderColor = 'rgba(99,102,241,0.5)')}
+                  onBlur={e => (e.target.style.borderColor = 'rgba(255,255,255,0.1)')}
+                  onKeyDown={e => { if (e.key === 'Enter') handleAddMemory() }}
+                />
+                <button onClick={handleAddMemory} disabled={!newMemory.trim()} style={{
+                  padding: '8px 14px', borderRadius: 8, border: 'none',
+                  background: newMemory.trim() ? '#6366f1' : 'rgba(255,255,255,0.06)',
+                  color: newMemory.trim() ? '#fff' : 'rgba(255,255,255,0.3)',
+                  cursor: newMemory.trim() ? 'pointer' : 'not-allowed',
+                  fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap',
+                }}>
+                  + {t('memory.add', locale)}
+                </button>
+              </div>
+              {memoryLoading ? (
+                <div style={{ textAlign: 'center', color: 'rgba(255,255,255,0.3)', padding: 16 }}>
+                  {t('common.loading', locale)}
+                </div>
+              ) : memories.length === 0 ? (
+                <div style={{ textAlign: 'center', color: 'rgba(255,255,255,0.3)', fontSize: 13, padding: 16 }}>
+                  {t('memory.empty', locale)}
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {memories.map(mem => (
+                    <div key={mem.id} style={{
+                      display: 'flex', alignItems: 'center', gap: 8,
+                      padding: '8px 12px', borderRadius: 8,
+                      background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)',
+                    }}>
+                      <span style={{ flex: 1, fontSize: 12, color: 'rgba(255,255,255,0.75)' }}>{mem.content}</span>
+                      <button onClick={() => handleDeleteMemory(mem.id)} style={{
+                        padding: '2px 6px', borderRadius: 4, border: 'none',
+                        background: 'rgba(239,68,68,0.15)', color: '#fca5a5',
+                        cursor: 'pointer', fontSize: 10, flexShrink: 0,
+                      }}>
+                        ✕
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 

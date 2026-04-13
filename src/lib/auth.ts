@@ -20,18 +20,19 @@ export const authOptions: NextAuthOptions = {
           where: { email: credentials.email },
         })
 
-        if (!user) {
-          throw new Error('Email không tồn tại')
+        // Always perform bcrypt comparison to prevent timing attacks
+        const dummyHash = '$2a$12$kNFsrIjb8yol73ZXbpEAfO5ZaRRVIrQ/ia.YWdepD24B/B/uduOLq'
+        const isPasswordValid = await compare(
+          credentials.password,
+          user?.password || dummyHash
+        )
+
+        if (!user || !isPasswordValid) {
+          throw new Error('Email hoặc mật khẩu không đúng')
         }
 
         if (!user.isActive) {
           throw new Error('Tài khoản đã bị vô hiệu hóa')
-        }
-
-        const isPasswordValid = await compare(credentials.password, user.password)
-
-        if (!isPasswordValid) {
-          throw new Error('Mật khẩu không đúng')
         }
 
         return {

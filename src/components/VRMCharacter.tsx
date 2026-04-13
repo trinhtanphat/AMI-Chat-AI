@@ -32,6 +32,7 @@ const VRMCharacter = forwardRef<VRMCharacterHandle, VRMCharacterProps>(
     const [isLoading, setIsLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [loadProgress, setLoadProgress] = useState('')
+    const [loadPercent, setLoadPercent] = useState(0)
 
     onModelLoadedRef.current = onModelLoaded
 
@@ -151,6 +152,7 @@ const VRMCharacter = forwardRef<VRMCharacterHandle, VRMCharacterProps>(
           setIsLoading(true)
           setError(null)
           setLoadProgress('Đang tải Three.js...')
+          setLoadPercent(10)
 
           const THREE = await import('three')
           if (cancelled) return
@@ -225,6 +227,7 @@ const VRMCharacter = forwardRef<VRMCharacterHandle, VRMCharacterProps>(
 
           // Load model (VRM or GLB)
           setLoadProgress('Đang tải mô hình 3D...')
+          setLoadPercent(25)
           const loader = new GLTFLoader()
           const isGLB = modelUrl.toLowerCase().endsWith('.glb')
 
@@ -242,8 +245,9 @@ const VRMCharacter = forwardRef<VRMCharacterHandle, VRMCharacterProps>(
 
           const gltf = await loader.loadAsync(modelUrl, (progress) => {
             if (progress.total > 0) {
-              const pct = Math.round((progress.loaded / progress.total) * 100)
-              setLoadProgress(`Đang tải: ${pct}%`)
+              const pct = Math.round(25 + ((progress.loaded / progress.total) * 65))
+              setLoadPercent(Math.min(pct, 90))
+              setLoadProgress(`Đang tải: ${Math.round((progress.loaded / progress.total) * 100)}%`)
             }
           })
 
@@ -314,6 +318,7 @@ const VRMCharacter = forwardRef<VRMCharacterHandle, VRMCharacterProps>(
             mixerRef.current = mixer
           }
 
+          setLoadPercent(100)
           setIsLoading(false)
           setLoadProgress('')
           onModelLoadedRef.current?.()
@@ -388,16 +393,42 @@ const VRMCharacter = forwardRef<VRMCharacterHandle, VRMCharacterProps>(
           <div style={{
             position: 'absolute', inset: 0, display: 'flex',
             flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-            gap: 8,
+            gap: 12,
           }}>
+            <div style={{ position: 'relative', width: 56, height: 56 }}>
+              <svg className="animate-spin" width="56" height="56" viewBox="0 0 56 56" fill="none" style={{ position: 'absolute', inset: 0 }}>
+                <defs>
+                  <linearGradient id="vrmSpinGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor="#818cf8" />
+                    <stop offset="100%" stopColor="#c084fc" />
+                  </linearGradient>
+                </defs>
+                <circle cx="28" cy="28" r="24" stroke="rgba(255,255,255,0.06)" strokeWidth="3" />
+                <path d="M52 28a24 24 0 01-18.7 23.4" stroke="url(#vrmSpinGrad)" strokeWidth="3" strokeLinecap="round" />
+              </svg>
+              <span style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22 }}>🧊</span>
+            </div>
+            {/* Progress bar */}
             <div style={{
-              width: 40, height: 40, border: '3px solid rgba(99,102,241,0.3)',
-              borderTopColor: '#6366f1', borderRadius: '50%',
-              animation: 'spin 1s linear infinite',
-            }} />
-            <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)' }}>
-              {loadProgress || 'Đang tải...'}
-            </span>
+              width: 200, height: 6, borderRadius: 3,
+              background: 'rgba(255,255,255,0.1)',
+              overflow: 'hidden',
+            }}>
+              <div style={{
+                height: '100%', borderRadius: 3,
+                background: 'linear-gradient(90deg, #818cf8, #c084fc)',
+                width: `${loadPercent}%`,
+                transition: 'width 0.3s ease-out',
+              }} />
+            </div>
+            <div style={{
+              padding: '6px 16px', borderRadius: 12,
+              background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(8px)',
+              color: 'rgba(255,255,255,0.6)', fontSize: 13,
+              display: 'flex', alignItems: 'center', gap: 4,
+            }}>
+              {loadProgress || 'Đang tải...'} {loadPercent > 0 && <span style={{ fontWeight: 600, color: 'rgba(255,255,255,0.8)' }}>{loadPercent}%</span>}
+            </div>
           </div>
         )}
         {error && (
