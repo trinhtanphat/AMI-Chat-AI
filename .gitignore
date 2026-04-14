@@ -40,3 +40,6 @@ yarn-debug.log*
 *.bak
 coverage/
 dist/
+
+# Crawl source data
+crawl_data/

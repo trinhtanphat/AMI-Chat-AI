@@ -153,11 +153,14 @@ async function main() {
       { name: 'My Character (GLB)', modelUrl: '/models/3d/MyCharacter.glb', category: '3d', sortOrder: 72 },
       // Ami-VNSO character with lip sync support
       { name: 'Ami-VNSO', modelUrl: '/models/Ami-PTIT/ptit_sdk.model3.json', category: 'anime', sortOrder: 0 },
+      // === Hiyori from airi project (dist.ayaka.moe) ===
+      { name: 'Hiyori Free (ZH)', modelUrl: '/models/Hiyori_Free/hiyori_free_t08.model3.json', category: 'anime', sortOrder: 73 },
+      { name: 'Hiyori Pro (ZH)', modelUrl: '/models/Hiyori_Pro/hiyori_pro_t11.model3.json', category: 'anime', sortOrder: 74 },
       // Ren is inactive (moc3 v6, needs Cubism SDK 5.x)
       { name: 'Ren (SDK5)', modelUrl: '/models/Ren/Ren.model3.json', category: 'anime', isActive: false, sortOrder: 99 },
     ],
   })
-  console.log('Live2D characters seeded (70 active + 1 inactive)')
+  console.log('Live2D characters seeded (72 active + 1 inactive)')
 }
 
 main()
