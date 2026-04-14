@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="en" class="scroll-smooth">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+	<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png" />
+	<link rel="apple-touch-icon" sizes="152x152" href="apple-touch-icon-152.png" />
+	<link rel="apple-touch-icon" sizes="120x120" href="apple-touch-icon-120.png" />
+    <title>ZeroWeight AI | Real-Time 2D Anime Avatar & Virtual Character</title>
+    <meta
+      name="description"
+      content="Launch an interactive 2D talking anime avatar on your website in minutes. Engage users with Zero Weight AI's real-time lip-syncing virtual character and anime waifu."
+    />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <style>
+      body {
+        font-family: "Inter", sans-serif;
+        background-color: #000;
+        color: #f5f5f5;
+      }
+
+      /* Custom Animation Keyframes */
+      @keyframes fadeSlideIn {
+        0% {
+          opacity: 0;
+          transform: translateY(30px);
+          filter: blur(8px);
+        }
+        100% {
+          opacity: 1;
+          transform: translateY(0);
+          filter: blur(0px);
+        }
+      }
+
+      @keyframes marquee-left {
+        from {
+          transform: translateX(0);
+        }
+        to {
+          transform: translateX(-50%);
+        }
+      }
+
+      /* Utility Classes */
+      .animate-fade-slide-in {
+        animation: fadeSlideIn 1s ease-out forwards;
+        opacity: 0; /* Start hidden */
+      }
+
+      .animation-delay-100 {
+        animation-delay: 0.1s;
+      }
+      .animation-delay-200 {
+        animation-delay: 0.2s;
+      }
+      .animation-delay-300 {
+        animation-delay: 0.3s;
+      }
+      .animation-delay-400 {
+        animation-delay: 0.4s;
+      }
+      .animation-delay-500 {
+        animation-delay: 0.5s;
+      }
+      .animation-delay-600 {
+        animation-delay: 0.6s;
+      }
+      .animation-delay-700 {
+        animation-delay: 0.7s;
+      }
+
+      .animate-marquee {
+        animation: marquee-left 80s linear infinite;
+        will-change: transform;
+      }
+
+      /* Border Gradient Effect using Masking */
+      .border-gradient {
+        position: relative;
+      }
+      .border-gradient::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        padding: 1px;
+        -webkit-mask:
+          linear-gradient(#fff 0 0) content-box,
+          linear-gradient(#fff 0 0);
+        -webkit-mask-composite: xor;
+        mask-composite: exclude;
+        background: linear-gradient(
+          225deg,
+          rgba(255, 255, 255, 0) 0%,
+          rgba(255, 255, 255, 0.2) 50%,
+          rgba(255, 255, 255, 0) 100%
+        );
+        pointer-events: none;
+      }
+      .border-gradient.before\:rounded-lg::before {
+        border-radius: 0.5rem;
+      }
+      .border-gradient.before\:rounded-xl::before {
+        border-radius: 0.75rem;
+      }
+      .border-gradient.before\:rounded-2xl::before {
+        border-radius: 1rem;
+      }
+      .border-gradient.before\:rounded-3xl::before {
+        border-radius: 1.5rem;
+      }
+      .border-gradient.before\:rounded-full::before {
+        border-radius: 9999px;
+      }
+
+      /* Gradient Blur Overlay */
+      .gradient-blur {
+        position: fixed;
+        z-index: 5;
+        inset: 0 0 auto 0;
+        height: 20%;
+        pointer-events: none;
+      }
+      .gradient-blur > div,
+      .gradient-blur::before,
+      .gradient-blur::after {
+        position: absolute;
+        inset: 0;
+      }
+      .gradient-blur::before {
+        content: "";
+        z-index: 1;
+        backdrop-filter: blur(0.5px);
+        mask: linear-gradient(
+          to top,
+          rgba(0, 0, 0, 0) 0%,
+          rgba(0, 0, 0, 1) 12.5%,
+          rgba(0, 0, 0, 1) 25%,
+          rgba(0, 0, 0, 0) 37.5%
+        );
+      }
+      /* Simplified layers for performance in React version, matching standard visual fidelity */
+      .gradient-blur > div:nth-of-type(1) {
+        z-index: 2;
+        backdrop-filter: blur(1px);
+        mask: linear-gradient(
+          to top,
+          rgba(0, 0, 0, 0) 12.5%,
+          rgba(0, 0, 0, 1) 25%,
+          rgba(0, 0, 0, 1) 37.5%,
+          rgba(0, 0, 0, 0) 50%
+        );
+      }
+      .gradient-blur > div:nth-of-type(2) {
+        z-index: 3;
+        backdrop-filter: blur(2px);
+        mask: linear-gradient(
+          to top,
+          rgba(0, 0, 0, 0) 25%,
+          rgba(0, 0, 0, 1) 37.5%,
+          rgba(0, 0, 0, 1) 50%,
+          rgba(0, 0, 0, 0) 62.5%
+        );
+      }
+      .gradient-blur > div:nth-of-type(3) {
+        z-index: 4;
+        backdrop-filter: blur(4px);
+        mask: linear-gradient(
+          to top,
+          rgba(0, 0, 0, 0) 37.5%,
+          rgba(0, 0, 0, 1) 50%,
+          rgba(0, 0, 0, 1) 62.5%,
+          rgba(0, 0, 0, 0) 75%
+        );
+      }
+      .gradient-blur > div:nth-of-type(4) {
+        z-index: 5;
+        backdrop-filter: blur(8px);
+        mask: linear-gradient(
+          to top,
+          rgba(0, 0, 0, 0) 50%,
+          rgba(0, 0, 0, 1) 62.5%,
+          rgba(0, 0, 0, 1) 75%,
+          rgba(0, 0, 0, 0) 87.5%
+        );
+      }
+      .gradient-blur > div:nth-of-type(5) {
+        z-index: 6;
+        backdrop-filter: blur(16px);
+        mask: linear-gradient(
+          to top,
+          rgba(0, 0, 0, 0) 62.5%,
+          rgba(0, 0, 0, 1) 75%,
+          rgba(0, 0, 0, 1) 87.5%,
+          rgba(0, 0, 0, 0) 100%
+        );
+      }
+      .gradient-blur::after {
+        content: "";
+        z-index: 8;
+        backdrop-filter: blur(64px);
+        mask: linear-gradient(
+          to top,
+          rgba(0, 0, 0, 0) 87.5%,
+          rgba(0, 0, 0, 1) 100%
+        );
+      }
+    </style>
+
+    
+    <title data-rh="true">Terms and Conditions | ZeroWeight AI</title>
+    <meta data-rh="true" property="og:type" content="website"/><meta data-rh="true" property="og:url" content="https://zeroweight.ai/"/><meta data-rh="true" property="og:title" content="ZeroWeight AI | Real-Time 2D Anime Avatar &amp; Virtual Character"/><meta data-rh="true" property="og:description" content="Launch an interactive 2D talking anime avatar on your website in minutes. Engage users with Zero Weight AI&#x27;s real-time lip-syncing virtual character and anime waifu."/><meta data-rh="true" property="og:image" content="https://zeroweight.ai/images/preview-image.png"/><meta data-rh="true" property="twitter:card" content="summary_large_image"/><meta data-rh="true" property="twitter:url" content="https://zeroweight.ai/"/><meta data-rh="true" property="twitter:title" content="ZeroWeight AI | Real-Time 2D Anime Avatar &amp; Virtual Character"/><meta data-rh="true" property="twitter:description" content="Launch an interactive 2D talking anime avatar on your website in minutes. Engage users with Zero Weight AI&#x27;s real-time lip-syncing virtual character and anime waifu."/><meta data-rh="true" property="twitter:image" content="https://zeroweight.ai/images/preview-image.png"/><meta data-rh="true" name="title" content="Terms and Conditions | ZeroWeight AI"/><meta data-rh="true" name="description" content="Terms of Service, Privacy Policy, and Refund Policy for ZeroWeight AI."/>
+    <link data-rh="true" rel="canonical" href="index.html"/>
+  
+    <link rel="stylesheet" href="https://zeroweight.ai/index.css" />
+
+    <!-- Google tag (gtag.js) -->
+    <script
+      async
+      src="https://www.googletagmanager.com/gtag/js?id=G-BL2JTRYR9V"
+    ></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag() {
+        dataLayer.push(arguments);
+      }
+      gtag("js", new Date());
+
+      gtag("config", "G-BL2JTRYR9V");
+    </script>
+    <script type="importmap">
+      {
+        "imports": {
+          "react/": "https://aistudiocdn.com/react@^19.2.0/",
+          "react": "https://aistudiocdn.com/react@^19.2.0",
+          "react-chartjs-2": "https://aistudiocdn.com/react-chartjs-2@^5.3.1",
+          "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+          "lucide-react": "https://aistudiocdn.com/lucide-react@^0.554.0",
+          "chart.js": "https://aistudiocdn.com/chart.js@^4.5.1",
+          "next/": "https://aistudiocdn.com/next@^16.0.3/",
+          "next": "https://aistudiocdn.com/next@^16.0.3"
+        }
+      }
+    </script>
+    <script type="module" crossorigin src="assets/index-Cl2-4I0Z.js"></script>
+  </head>
+  <body>
+    <div id="root"><link rel="preload" as="image" href="images/logo.png"/><div class="min-h-screen bg-black text-neutral-100 antialiased selection:bg-violet-500/30 selection:text-violet-200"><canvas class="pointer-events-none fixed inset-0 z-[9999]" style="pointer-events:none"></canvas><div class="gradient-blur"><div></div><div></div><div></div><div></div><div></div></div><div class="pointer-events-none fixed inset-0 -z-10"><div class="absolute inset-0 opacity-60" style="background:radial-gradient(800px 400px at 20% 10%, rgba(59,130,246,.16), transparent 60%),
+            radial-gradient(800px 400px at 80% 10%, rgba(249,115,22,.14), transparent 60%),
+            radial-gradient(1000px 600px at 50% 100%, rgba(0,0,0,.08), transparent 70%)"></div></div><header class="relative z-50 sticky top-0 backdrop-blur-xl bg-[#0a0a12]/80 border-b border-white/5"><div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"><div class="flex h-16 items-center justify-between"><a class="flex items-center gap-3" href="index.html" data-discover="true"><span class="inline-flex h-9 w-9 items-center justify-center rounded-xl shadow-[0_0_0_1px_rgba(208,113,52,0.6)_inset]"><img src="images/logo.png" alt="ZeroWeight Logo" class="h-6 w-6 object-contain"/></span><span class="text-lg font-semibold tracking-tight text-white">ZeroWeight AI</span></a><nav class="hidden md:flex gap-1 border border-white/5 rounded-full px-4 items-center"><a class="px-3 py-2 text-sm font-medium text-zinc-300 hover:text-white transition-colors" href="index.html#how-it-works" data-discover="true">How it Works</a><a class="px-3 py-2 text-sm font-medium text-zinc-300 hover:text-white transition-colors" href="index.html#pricing" data-discover="true">Pricing</a><a class="px-3 py-2 text-sm font-medium text-zinc-300 hover:text-white transition-colors" href="index.html#faq" data-discover="true">FAQ</a></nav></div></div></header><main class="relative z-10"><div class="mx-auto max-w-4xl px-6 py-24 pb-48"><div class="prose prose-invert prose-violet max-w-none"><h1 class="text-4xl font-bold mb-8 text-white">Terms and Conditions</h1><div class="space-y-12"><section><h2 class="text-2xl font-semibold mb-4 text-violet-400">Terms of Service</h2><div class="text-neutral-300 space-y-4"><p>Welcome to ZeroWeight AI. By accessing or using our service, you agree to be bound by these Terms of Service. If you do not agree with any part of these terms, you may not use our service.</p><h3 class="text-xl font-medium text-white mt-6 mb-2">1. Account Creation</h3><p>You must provide accurate and complete information when creating your account. You are responsible for maintaining the security of your account and password.</p><h3 class="text-xl font-medium text-white mt-6 mb-2">2. Use of Service</h3><p>You agree not to use the service for any illegal or unauthorized purpose. You must not violate any laws in your jurisdiction (including but not limited to copyright laws).</p><h3 class="text-xl font-medium text-white mt-6 mb-2">3. Content and AI Generations</h3><p>Users are solely responsible for the inputs and content generated using our AI avatars. ZeroWeight AI claims no ownership of the content you process or create using our platform, but you grant us a license to use this content as necessary to provide the service.</p></div></section><section><h2 class="text-2xl font-semibold mb-4 text-violet-400">Privacy Policy</h2><div class="text-neutral-300 space-y-4"><p>Your privacy is important to us. This section explains what information we collect, how we use it, and your rights regarding your personal data.</p><h3 class="text-xl font-medium text-white mt-6 mb-2">Data Collection</h3><p>We collect information you provide directly to us (e.g., account details, payment information) and data collected automatically through your use of the service (e.g., log data, usage analytics).</p><h3 class="text-xl font-medium text-white mt-6 mb-2">Data Usage</h3><p>We use the collected data to provide, maintain, and improve our services, process transactions, send notifications, and personalize your experience.</p><h3 class="text-xl font-medium text-white mt-6 mb-2">Data Protection</h3><p>We implement industry-standard security measures to protect your personal information from unauthorized access, alteration, disclosure, or destruction. We do not sell your personal data to third parties.</p></div></section><section><h2 class="text-2xl font-semibold mb-4 text-violet-400">Refund Policy</h2><div class="text-neutral-300 space-y-4"><p>We offer a transparent refund policy for subscriptions and extra credits.</p><h3 class="text-xl font-medium text-white mt-6 mb-2">Subscriptions</h3><p>You may cancel your subscription at any time. There are no refunds for partial months or unused time in a billing cycle. However, you will retain access to the service through the end of your current billing period.</p><h3 class="text-xl font-medium text-white mt-6 mb-2">Extra Credits</h3><p>Purchases of one-time extra credit packs are final and non-refundable, except where required by law.</p></div></section><div class="mt-12 pt-8 border-t border-white/10 text-neutral-400 text-sm">Last updated: <!-- -->April 11, 2026</div></div></div></div></main><footer class="relative z-10 border-t border-white/10 bg-[#0a0a12]"><div class="max-w-7xl mx-auto pt-10 pb-10 px-4 sm:px-6 lg:px-8"><div class="flex flex-col sm:flex-row items-center justify-between gap-6"><div class="flex flex-col sm:flex-row items-center gap-4 sm:gap-6"><div class="flex items-center gap-3"><span class="inline-flex h-9 w-9 items-center justify-center rounded-xl shadow-[0_0_0_1px_rgba(208,113,52,0.6)_inset]"><img src="images/logo.png" alt="ZeroWeight Logo" class="h-6 w-6 object-contain"/></span><span class="text-sm font-medium text-zinc-300">© <!-- -->2026<!-- --> ZeroWeight AI</span></div><div class="flex items-center gap-4 border-l border-white/10 pl-0 sm:pl-6"><a href="https://www.facebook.com/zeroweightai" target="_blank" rel="noopener noreferrer" class="text-zinc-500 hover:text-white transition-colors"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-facebook" aria-hidden="true"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"></path></svg></a><a href="https://www.linkedin.com/company/zeroweight-ai" target="_blank" rel="noopener noreferrer" class="text-zinc-500 hover:text-white transition-colors"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-linkedin" aria-hidden="true"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"></path><rect width="4" height="12" x="2" y="9"></rect><circle cx="4" cy="4" r="2"></circle></svg></a><a href="https://www.youtube.com/@ZeroWeightAI" target="_blank" rel="noopener noreferrer" class="text-zinc-500 hover:text-white transition-colors"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-youtube" aria-hidden="true"><path d="M2.5 17a24.12 24.12 0 0 1 0-10 2 2 0 0 1 1.4-1.4 49.56 49.56 0 0 1 16.2 0A2 2 0 0 1 21.5 7a24.12 24.12 0 0 1 0 10 2 2 0 0 1-1.4 1.4 49.55 49.55 0 0 1-16.2 0A2 2 0 0 1 2.5 17"></path><path d="m10 15 5-3-5-3z"></path></svg></a></div></div><div class="flex items-center gap-4 text-sm text-zinc-400"><a class="hover:text-zinc-200 transition-colors" href="terms-and-conditions.html" data-discover="true">Privacy Policy</a><a class="hover:text-zinc-200 transition-colors" href="terms-and-conditions.html" data-discover="true">Terms of Service</a><a class="hover:text-zinc-200 transition-colors" href="terms-and-conditions.html" data-discover="true">Refund Policy</a></div></div></div></footer></div></div>
+  </body>
+</html>

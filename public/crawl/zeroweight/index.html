@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="en" class="scroll-smooth">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+	<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png" />
+	<link rel="apple-touch-icon" sizes="152x152" href="apple-touch-icon-152.png" />
+	<link rel="apple-touch-icon" sizes="120x120" href="apple-touch-icon-120.png" />
+    <title>ZeroWeight AI | Real-Time 2D Anime Avatar & Virtual Character</title>
+    <meta
+      name="description"
+      content="Launch an interactive 2D talking anime avatar on your website in minutes. Engage users with Zero Weight AI's real-time lip-syncing virtual character and anime waifu."
+    />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <style>
+      body {
+        font-family: "Inter", sans-serif;
+        background-color: #000;
+        color: #f5f5f5;
+      }
+
+      /* Custom Animation Keyframes */
+      @keyframes fadeSlideIn {
+        0% {
+          opacity: 0;
+          transform: translateY(30px);
+          filter: blur(8px);
+        }
+        100% {
+          opacity: 1;
+          transform: translateY(0);
+          filter: blur(0px);
+        }
+      }
+
+      @keyframes marquee-left {
+        from {
+          transform: translateX(0);
+        }
+        to {
+          transform: translateX(-50%);
+        }
+      }
+
+      /* Utility Classes */
+      .animate-fade-slide-in {
+        animation: fadeSlideIn 1s ease-out forwards;
+        opacity: 0; /* Start hidden */
+      }
+
+      .animation-delay-100 {
+        animation-delay: 0.1s;
+      }
+      .animation-delay-200 {
+        animation-delay: 0.2s;
+      }
+      .animation-delay-300 {
+        animation-delay: 0.3s;
+      }
+      .animation-delay-400 {
+        animation-delay: 0.4s;
+      }
+      .animation-delay-500 {
+        animation-delay: 0.5s;
+      }
+      .animation-delay-600 {
+        animation-delay: 0.6s;
+      }
+      .animation-delay-700 {
+        animation-delay: 0.7s;
+      }
+
+      .animate-marquee {
+        animation: marquee-left 80s linear infinite;
+        will-change: transform;
+      }
+
+      /* Border Gradient Effect using Masking */
+      .border-gradient {
+        position: relative;
+      }
+      .border-gradient::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        padding: 1px;
+        -webkit-mask:
+          linear-gradient(#fff 0 0) content-box,
+          linear-gradient(#fff 0 0);
+        -webkit-mask-composite: xor;
+        mask-composite: exclude;
+        background: linear-gradient(
+          225deg,
+          rgba(255, 255, 255, 0) 0%,
+          rgba(255, 255, 255, 0.2) 50%,
+          rgba(255, 255, 255, 0) 100%
+        );
+        pointer-events: none;
+      }
+      .border-gradient.before\:rounded-lg::before {
+        border-radius: 0.5rem;
+      }
+      .border-gradient.before\:rounded-xl::before {
+        border-radius: 0.75rem;
+      }
+      .border-gradient.before\:rounded-2xl::before {
+        border-radius: 1rem;
+      }
+      .border-gradient.before\:rounded-3xl::before {
+        border-radius: 1.5rem;
+      }
+      .border-gradient.before\:rounded-full::before {
+        border-radius: 9999px;
+      }
+
+      /* Gradient Blur Overlay */
+      .gradient-blur {
+        position: fixed;
+        z-index: 5;
+        inset: 0 0 auto 0;
+        height: 20%;
+        pointer-events: none;
+      }
+      .gradient-blur > div,
+      .gradient-blur::before,
+      .gradient-blur::after {
+        position: absolute;
+        inset: 0;
+      }
+      .gradient-blur::before {
+        content: "";
+        z-index: 1;
+        backdrop-filter: blur(0.5px);
+        mask: linear-gradient(
+          to top,
+          rgba(0, 0, 0, 0) 0%,
+          rgba(0, 0, 0, 1) 12.5%,
+          rgba(0, 0, 0, 1) 25%,
+          rgba(0, 0, 0, 0) 37.5%
+        );
+      }
+      /* Simplified layers for performance in React version, matching standard visual fidelity */
+      .gradient-blur > div:nth-of-type(1) {
+        z-index: 2;
+        backdrop-filter: blur(1px);
+        mask: linear-gradient(
+          to top,
+          rgba(0, 0, 0, 0) 12.5%,
+          rgba(0, 0, 0, 1) 25%,
+          rgba(0, 0, 0, 1) 37.5%,
+          rgba(0, 0, 0, 0) 50%
+        );
+      }
+      .gradient-blur > div:nth-of-type(2) {
+        z-index: 3;
+        backdrop-filter: blur(2px);
+        mask: linear-gradient(
+          to top,
+          rgba(0, 0, 0, 0) 25%,
+          rgba(0, 0, 0, 1) 37.5%,
+          rgba(0, 0, 0, 1) 50%,
+          rgba(0, 0, 0, 0) 62.5%
+        );
+      }
+      .gradient-blur > div:nth-of-type(3) {
+        z-index: 4;
+        backdrop-filter: blur(4px);
+        mask: linear-gradient(
+          to top,
+          rgba(0, 0, 0, 0) 37.5%,
+          rgba(0, 0, 0, 1) 50%,
+          rgba(0, 0, 0, 1) 62.5%,
+          rgba(0, 0, 0, 0) 75%
+        );
+      }
+      .gradient-blur > div:nth-of-type(4) {
+        z-index: 5;
+        backdrop-filter: blur(8px);
+        mask: linear-gradient(
+          to top,
+          rgba(0, 0, 0, 0) 50%,
+          rgba(0, 0, 0, 1) 62.5%,
+          rgba(0, 0, 0, 1) 75%,
+          rgba(0, 0, 0, 0) 87.5%
+        );
+      }
+      .gradient-blur > div:nth-of-type(5) {
+        z-index: 6;
+        backdrop-filter: blur(16px);
+        mask: linear-gradient(
+          to top,
+          rgba(0, 0, 0, 0) 62.5%,
+          rgba(0, 0, 0, 1) 75%,
+          rgba(0, 0, 0, 1) 87.5%,
+          rgba(0, 0, 0, 0) 100%
+        );
+      }
+      .gradient-blur::after {
+        content: "";
+        z-index: 8;
+        backdrop-filter: blur(64px);
+        mask: linear-gradient(
+          to top,
+          rgba(0, 0, 0, 0) 87.5%,
+          rgba(0, 0, 0, 1) 100%
+        );
+      }
+    </style>
+
+    
+    <title data-rh="true">ZeroWeight AI | Real-Time 2D Anime Avatar &amp; Virtual Character</title>
+    <meta data-rh="true" name="title" content="ZeroWeight AI | Real-Time 2D Anime Avatar &amp; Virtual Character"/><meta data-rh="true" name="description" content="Launch an interactive 2D talking anime avatar on your website in minutes. Engage users with Zero Weight AI&#x27;s real-time lip-syncing virtual character and anime waifu."/><meta data-rh="true" property="og:type" content="website"/><meta data-rh="true" property="og:url" content="https://zeroweight.ai/"/><meta data-rh="true" property="og:title" content="ZeroWeight AI | Real-Time 2D Anime Avatar &amp; Virtual Character"/><meta data-rh="true" property="og:description" content="Launch an interactive 2D talking anime avatar on your website in minutes. Engage users with Zero Weight AI&#x27;s real-time lip-syncing virtual character and anime waifu."/><meta data-rh="true" property="og:image" content="https://zeroweight.ai/images/preview-image.png"/><meta data-rh="true" property="twitter:card" content="summary_large_image"/><meta data-rh="true" property="twitter:url" content="https://zeroweight.ai/"/><meta data-rh="true" property="twitter:title" content="ZeroWeight AI | Real-Time 2D Anime Avatar &amp; Virtual Character"/><meta data-rh="true" property="twitter:description" content="Launch an interactive 2D talking anime avatar on your website in minutes. Engage users with Zero Weight AI&#x27;s real-time lip-syncing virtual character and anime waifu."/><meta data-rh="true" property="twitter:image" content="https://zeroweight.ai/images/preview-image.png"/>
+    <link data-rh="true" rel="canonical" href="index.html"/>
+  
+    <link rel="stylesheet" href="https://zeroweight.ai/index.css" />
+
+    <!-- Google tag (gtag.js) -->
+    <script
+      async
+      src="https://www.googletagmanager.com/gtag/js?id=G-BL2JTRYR9V"
+    ></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag() {
+        dataLayer.push(arguments);
+      }
+      gtag("js", new Date());
+
+      gtag("config", "G-BL2JTRYR9V");
+    </script>
+    <script type="importmap">
+      {
+        "imports": {
+          "react/": "https://aistudiocdn.com/react@^19.2.0/",
+          "react": "https://aistudiocdn.com/react@^19.2.0",
+          "react-chartjs-2": "https://aistudiocdn.com/react-chartjs-2@^5.3.1",
+          "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+          "lucide-react": "https://aistudiocdn.com/lucide-react@^0.554.0",
+          "chart.js": "https://aistudiocdn.com/chart.js@^4.5.1",
+          "next/": "https://aistudiocdn.com/next@^16.0.3/",
+          "next": "https://aistudiocdn.com/next@^16.0.3"
+        }
+      }
+    </script>
+    <script type="module" crossorigin src="assets/index-Cl2-4I0Z.js"></script>
+  </head>
+  <body>
+    <div id="root"><link rel="preload" as="image" href="images/logo.png"/><div class="min-h-screen bg-black text-neutral-100 antialiased selection:bg-violet-500/30 selection:text-violet-200"><canvas class="pointer-events-none fixed inset-0 z-[9999]" style="pointer-events:none"></canvas><div class="gradient-blur"><div></div><div></div><div></div><div></div><div></div></div><div class="pointer-events-none fixed inset-0 -z-10"><div class="absolute inset-0 opacity-60" style="background:radial-gradient(800px 400px at 20% 10%, rgba(59,130,246,.16), transparent 60%),
+            radial-gradient(800px 400px at 80% 10%, rgba(249,115,22,.14), transparent 60%),
+            radial-gradient(1000px 600px at 50% 100%, rgba(0,0,0,.08), transparent 70%)"></div></div><header class="relative z-50 sticky top-0 backdrop-blur-xl bg-[#0a0a12]/80 border-b border-white/5"><div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"><div class="flex h-16 items-center justify-between"><a class="flex items-center gap-3" href="index.html" data-discover="true"><span class="inline-flex h-9 w-9 items-center justify-center rounded-xl shadow-[0_0_0_1px_rgba(208,113,52,0.6)_inset]"><img src="images/logo.png" alt="ZeroWeight Logo" class="h-6 w-6 object-contain"/></span><span class="text-lg font-semibold tracking-tight text-white">ZeroWeight AI</span></a><nav class="hidden md:flex gap-1 border border-white/5 rounded-full px-4 items-center"><a class="px-3 py-2 text-sm font-medium text-zinc-300 hover:text-white transition-colors" href="index.html#how-it-works" data-discover="true">How it Works</a><a class="px-3 py-2 text-sm font-medium text-zinc-300 hover:text-white transition-colors" href="index.html#pricing" data-discover="true">Pricing</a><a class="px-3 py-2 text-sm font-medium text-zinc-300 hover:text-white transition-colors" href="index.html#faq" data-discover="true">FAQ</a></nav></div></div></header><main class="relative z-10"><div class="flex flex-col-reverse lg:flex-row w-full relative min-h-[calc(100vh-4rem)]"><div class="absolute inset-0 z-0 pointer-events-none overflow-hidden"><div class="absolute inset-0 bg-cover bg-center opacity-20 grayscale brightness-50"></div><div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full text-center mt-32 pointer-events-none select-none"><div class="font-[&#x27;Uncial_Antiqua&#x27;] text-[15vh] leading-none text-white/5 opacity-50 blur-sm">AI <span class="text-[0.6em] ml-4">AVATAR</span></div></div><div class="absolute inset-0 bg-gradient-to-b from-[#0a0a12] via-transparent to-[#0a0a12]"></div></div><div class="w-full lg:w-1/2 xl:w-[70%] relative z-10 flex flex-col justify-center"><section class="relative z-10 bg-transparent overflow-hidden min-h-[600px] lg:h-full lg:min-h-0 flex flex-col justify-center pt-20 pb-20 lg:pt-0 lg:pb-0"><div class="max-w-6xl mx-auto px-6 lg:px-8 relative z-20"><div class="flex flex-col text-center items-center mb-16"><div class="mb-6 animate-fade-slide-in opacity-0" style="animation-delay:0.1s"><span class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium text-zinc-200 backdrop-blur shadow-lg"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-sparkles w-3.5 h-3.5 text-orange-300" aria-hidden="true"><path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z"></path><path d="M20 2v4"></path><path d="M22 4h-4"></path><circle cx="4" cy="20" r="2"></circle></svg>Real-Time 2D Anime Avatar</span></div><h1 class="text-5xl sm:text-7xl md:text-8xl lg:text-5xl xl:text-6xl font-semibold text-white tracking-tight mb-6 animate-fade-slide-in opacity-0" style="animation-delay:0.2s">Bring Your Website to Life <br class="hidden sm:block"/> with a 2D Anime Avatar</h1><p class="max-w-xl mx-auto text-lg sm:text-xl text-zinc-300 animate-fade-slide-in opacity-0" style="animation-delay:0.3s">Zero Weight AI gives you an interactive 2D virtual character that <strong class="text-white">moves, reacts, and talks in real time</strong>.</p><div class="mt-10 animate-fade-slide-in opacity-0" style="animation-delay:0.4s"><a href="https://platform.zeroweight.ai/dashboard" class="inline-flex items-center gap-2 group shadow-xl shadow-orange-900/20 text-base font-semibold text-white bg-gradient-to-br from-orange-500 to-pink-600 rounded-full py-4 px-8 transform-gpu transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-orange-500/40 hover:scale-[1.02] active:scale-[0.98]">Get Started Now<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-sparkles w-4 h-4 transition-transform group-hover:rotate-12" aria-hidden="true"><path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z"></path><path d="M20 2v4"></path><path d="M22 4h-4"></path><circle cx="4" cy="20" r="2"></circle></svg></a></div></div></div></section></div></div><div class="mx-auto max-w-7xl px-6"><div class="h-px w-full bg-white/10"></div></div><div id="how-it-works"><section class="py-24 px-6 max-w-7xl mx-auto transition-all duration-1000 opacity-0 translate-y-10"><div class="text-center mb-16 md:mb-20"><span class="inline-flex items-center rounded-full bg-zinc-900/70 ring-1 ring-white/10 px-3 py-1 text-xs text-zinc-300 border-gradient before:rounded-full mb-6">Simple Integration</span><h2 class="text-4xl sm:text-5xl font-semibold text-white tracking-tight">How to Embed Your 2D Talking Character</h2><p class="mt-4 text-zinc-400 max-w-2xl mx-auto text-lg">Three steps to interactive anime character integration via ZeroWeight API.</p></div><div class="grid grid-cols-1 md:grid-cols-3 gap-8 relative"><div class="hidden md:block absolute top-1/2 left-[15%] right-[15%] h-px bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-y-1/2 pointer-events-none z-0"></div><div class="relative z-10 bg-zinc-900/40 p-10 rounded-3xl ring-1 ring-white/10 hover:bg-zinc-800/40 transition-colors border-gradient before:rounded-3xl flex flex-col items-center text-center shadow-lg group"><div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-orange-500/20 to-orange-600/5 flex items-center justify-center mb-8 ring-1 ring-orange-500/20 group-hover:scale-110 transition-transform duration-300 shadow-[0_0_30px_rgba(249,115,22,0.1)]"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-wand-sparkles w-7 h-7 text-orange-400" aria-hidden="true"><path d="m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72"></path><path d="m14 7 3 3"></path><path d="M5 6v4"></path><path d="M19 14v4"></path><path d="M10 2v2"></path><path d="M7 8H3"></path><path d="M21 16h-4"></path><path d="M11 3H9"></path></svg></div><h3 class="text-2xl font-semibold text-white mb-4">Create</h3><p class="text-zinc-400 leading-relaxed text-base">Choose a replica or create your own avatar.</p></div><div class="relative z-10 bg-zinc-900/40 p-10 rounded-3xl ring-1 ring-white/10 hover:bg-zinc-800/40 transition-colors border-gradient before:rounded-3xl flex flex-col items-center text-center shadow-lg group md:-translate-y-4"><div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-pink-500/20 to-pink-600/5 flex items-center justify-center mb-8 ring-1 ring-pink-500/20 group-hover:scale-110 transition-transform duration-300 shadow-[0_0_30px_rgba(236,72,153,0.1)]"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-square-code w-7 h-7 text-pink-400" aria-hidden="true"><path d="m10 9-3 3 3 3"></path><path d="m14 15 3-3-3-3"></path><rect x="3" y="3" width="18" height="18" rx="2"></rect></svg></div><h3 class="text-2xl font-semibold text-white mb-4">Embed</h3><p class="text-zinc-400 leading-relaxed text-base">Add it to your site. It runs instantly in real-time.</p></div><div class="relative z-10 bg-zinc-900/40 p-10 rounded-3xl ring-1 ring-white/10 hover:bg-zinc-800/40 transition-colors border-gradient before:rounded-3xl flex flex-col items-center text-center shadow-lg group"><div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500/20 to-violet-600/5 flex items-center justify-center mb-8 ring-1 ring-blue-500/20 group-hover:scale-110 transition-transform duration-300 shadow-[0_0_30px_rgba(59,130,246,0.1)]"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-cable w-7 h-7 text-blue-400" aria-hidden="true"><path d="M17 19a1 1 0 0 1-1-1v-2a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2a1 1 0 0 1-1 1z"></path><path d="M17 21v-2"></path><path d="M19 14V6.5a1 1 0 0 0-7 0v11a1 1 0 0 1-7 0V10"></path><path d="M21 21v-2"></path><path d="M3 5V3"></path><path d="M4 10a2 2 0 0 1-2-2V6a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2a2 2 0 0 1-2 2z"></path><path d="M7 5V3"></path></svg></div><h3 class="text-2xl font-semibold text-white mb-4">Connect</h3><p class="text-zinc-400 leading-relaxed text-base">Link your avatar to your voice agent so it can speak and listen.</p></div></div></section></div><section class="py-12 md:py-16 max-w-7xl mx-auto px-4 sm:px-6 transition-all duration-1000 opacity-0 translate-y-10"><div class="bg-zinc-900/40 p-8 sm:p-12 md:p-14 border border-white/10 relative overflow-hidden ring-1 ring-white/10 rounded-2xl md:rounded-3xl border-gradient before:rounded-2xl md:before:rounded-3xl shadow-xl"><div class="absolute inset-x-0 -top-px h-px bg-gradient-to-r from-transparent via-white/20 to-transparent pointer-events-none"></div><div class="absolute -inset-y-32 -inset-x-32 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.05),transparent_50%)] pointer-events-none blur-3xl"></div><div class="text-center md:text-left mb-10 md:mb-14 relative z-10 flex flex-col md:flex-row md:items-end justify-between gap-6"><div class="max-w-xl"><span class="inline-flex items-center rounded-full bg-zinc-800/80 ring-1 ring-white/10 px-3 py-1 text-xs text-zinc-300 mb-4 border-gradient before:rounded-full">Included Essentials</span><h2 class="text-3xl sm:text-4xl font-semibold text-white tracking-tight">ZeroWeight AI Features &amp; Capabilities</h2><p class="text-zinc-400 mt-3 text-sm sm:text-base leading-relaxed">No matter which plan you choose, all active subscriptions include access to these core features right out of the box.</p></div></div><div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-x-8 sm:gap-y-10 relative z-10"><div class="flex flex-col gap-4 p-5 sm:p-0 rounded-2xl sm:rounded-none bg-zinc-900/40 sm:bg-transparent border border-white/5 sm:border-transparent hover:bg-zinc-800/50 sm:hover:bg-transparent transition-colors duration-300"><div class="flex-shrink-0 w-12 h-12 rounded-xl bg-gradient-to-b from-white/10 to-white/5 flex items-center justify-center border border-white/10 shadow-inner"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-user w-6 h-6 text-zinc-200" aria-hidden="true"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg></div><div><h3 class="font-medium text-white text-base">Real-time 2D AI Avatar Model</h3><p class="text-sm text-zinc-400 mt-1.5 leading-snug">Access the core model engine</p></div></div><div class="flex flex-col gap-4 p-5 sm:p-0 rounded-2xl sm:rounded-none bg-zinc-900/40 sm:bg-transparent border border-white/5 sm:border-transparent hover:bg-zinc-800/50 sm:hover:bg-transparent transition-colors duration-300"><div class="flex-shrink-0 w-12 h-12 rounded-xl bg-gradient-to-b from-white/10 to-white/5 flex items-center justify-center border border-white/10 shadow-inner"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-monitor-play w-6 h-6 text-zinc-200" aria-hidden="true"><path d="M15.033 9.44a.647.647 0 0 1 0 1.12l-4.065 2.352a.645.645 0 0 1-.968-.56V7.648a.645.645 0 0 1 .967-.56z"></path><path d="M12 17v4"></path><path d="M8 21h8"></path><rect x="2" y="3" width="20" height="14" rx="2"></rect></svg></div><div><h3 class="font-medium text-white text-base">Portrait, Upper &amp; Full Body</h3><p class="text-sm text-zinc-400 mt-1.5 leading-snug">Flexible framing options</p></div></div><div class="flex flex-col gap-4 p-5 sm:p-0 rounded-2xl sm:rounded-none bg-zinc-900/40 sm:bg-transparent border border-white/5 sm:border-transparent hover:bg-zinc-800/50 sm:hover:bg-transparent transition-colors duration-300"><div class="flex-shrink-0 w-12 h-12 rounded-xl bg-gradient-to-b from-white/10 to-white/5 flex items-center justify-center border border-white/10 shadow-inner"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-code-xml w-6 h-6 text-zinc-200" aria-hidden="true"><path d="m18 16 4-4-4-4"></path><path d="m6 8-4 4 4 4"></path><path d="m14.5 4-5 16"></path></svg></div><div><h3 class="font-medium text-white text-base">Embed on Your Website</h3><p class="text-sm text-zinc-400 mt-1.5 leading-snug">Seamless integration</p></div></div><div class="flex flex-col gap-4 p-5 sm:p-0 rounded-2xl sm:rounded-none bg-zinc-900/40 sm:bg-transparent border border-white/5 sm:border-transparent hover:bg-zinc-800/50 sm:hover:bg-transparent transition-colors duration-300"><div class="flex-shrink-0 w-12 h-12 rounded-xl bg-gradient-to-b from-white/10 to-white/5 flex items-center justify-center border border-white/10 shadow-inner"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check w-6 h-6 text-zinc-200" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg></div><div><h3 class="font-medium text-white text-base">Free Avatar Runtime</h3><p class="text-sm text-zinc-400 mt-1.5 leading-snug">No per-minute inference fees</p></div></div></div></div></section><div id="pricing" class="mx-auto max-w-7xl px-6"><div class="h-px w-full bg-white/10"></div></div><section class="py-24 max-w-7xl mx-auto px-6 transition-all duration-1000 opacity-0 translate-y-10"><div class="text-center max-w-3xl mx-auto"><span class="inline-flex items-center rounded-full bg-zinc-900/70 ring-1 ring-white/10 px-3 py-1 text-xs text-zinc-300 border-gradient before:rounded-full">Simple Pricing</span><h2 class="text-4xl sm:text-5xl md:text-6xl tracking-tight mt-6 font-semibold leading-[1.1] text-white">Pricing for Your Virtual Character</h2><p class="text-base text-zinc-400 mt-4">Start for free and upgrade for more features.</p></div><div class="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8 mt-12"><div class="relative rounded-2xl ring-1 ring-white/10 bg-zinc-900/40 p-6 sm:p-8 border-gradient before:rounded-2xl transition-all duration-1000 delay-200 opacity-0 translate-y-10"><div class="absolute inset-x-0 -top-px h-px bg-gradient-to-r from-transparent via-white/10 to-transparent rounded-full pointer-events-none"></div><h3 class="text-xl font-semibold text-white">Free</h3><p class="text-sm text-zinc-400 mt-2">For trying ZeroWeight and simple personal projects</p><div class="mt-6"><span class="text-4xl tracking-tight font-semibold text-white">$0</span><span class="text-zinc-500 text-base">/month</span></div><ul class="mt-8 space-y-3"><li class="flex items-start gap-3 text-sm text-zinc-300"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check text-orange-400 flex-shrink-0 mt-0.5" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg> <div>100 credits included</div></li><li class="flex items-start gap-3 text-sm text-zinc-300"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check text-orange-400 flex-shrink-0 mt-0.5" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg> <div><strong class="text-white">Unlimited avatar rendering inference</strong></div></li><li class="flex items-start gap-3 text-sm text-zinc-300"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check text-orange-400 flex-shrink-0 mt-0.5" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg> <div>Portrait, upper-body, and full-body modes</div></li><li class="flex items-start gap-3 text-sm text-zinc-300"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check text-orange-400 flex-shrink-0 mt-0.5" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg> <div>Rendering API Access</div></li></ul><div class="mt-4 pt-4 border-t border-white/5"><span class="text-xs font-semibold text-white uppercase tracking-wider">Core Modes</span><ul class="mt-2 space-y-2"><li class="text-sm text-zinc-400 flex items-center gap-2"><div class="w-1.5 h-1.5 rounded-full bg-pink-500"></div> Speaking</li><li class="text-sm text-zinc-400 flex items-center gap-2"><div class="w-1.5 h-1.5 rounded-full bg-pink-500"></div> Listening</li></ul></div><a href="https://platform.zeroweight.ai/subscription" class="mt-8 w-full inline-flex items-center justify-center gap-2 rounded-full bg-zinc-800/60 px-5 py-3 text-sm font-medium text-zinc-100 ring-1 ring-white/10 hover:bg-zinc-800 border-gradient before:rounded-full transition">Get Started Free</a></div><div class="relative rounded-2xl ring-1 ring-pink-500/30 bg-zinc-900/40 p-6 sm:p-8 border-gradient before:rounded-2xl bg-[radial-gradient(900px_220px_at_50%_50%,rgba(236,72,153,0.15),transparent)] md:scale-105 shadow-2xl shadow-pink-500/10 transition-all duration-1000 delay-300 opacity-0 translate-y-10"><div class="absolute inset-x-0 -top-px h-px bg-gradient-to-r from-transparent via-pink-400/50 to-transparent rounded-full pointer-events-none"></div><div class="absolute -top-3 left-1/2 -translate-x-1/2"><span class="inline-flex items-center rounded-full bg-pink-500 px-3 py-1 text-xs font-medium text-white shadow-lg shadow-pink-500/25">Most Popular</span></div><h3 class="text-xl font-semibold text-white">Starter</h3><p class="text-sm text-zinc-400 mt-2">For creators and interactive websites</p><div class="mt-6"><span class="text-4xl tracking-tight font-semibold text-white">$9</span><span class="text-zinc-500 text-base">/month</span></div><ul class="mt-8 space-y-3"><li class="flex items-start gap-3 text-sm text-zinc-300"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check text-orange-400 flex-shrink-0 mt-0.5" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg> <div class="leading-snug">Everything in Free plan</div></li><li class="flex items-start gap-3 text-sm text-zinc-300"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check text-orange-400 flex-shrink-0 mt-0.5" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg> <div class="leading-snug">1000 credits per month</div></li><li class="flex items-start gap-3 text-sm text-zinc-300"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check text-orange-400 flex-shrink-0 mt-0.5" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg> <div class="leading-snug"><strong class="text-white">Publish your avatars on the marketplace</strong></div></li><li class="flex items-start gap-3 text-sm text-zinc-300"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check text-orange-400 flex-shrink-0 mt-0.5" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg> <div class="leading-snug"><strong class="text-white">Voice Agent API Access</strong></div></li></ul><div class="mt-4 pt-4 border-t border-white/5"><span class="text-xs font-semibold text-white uppercase tracking-wider">Core Modes</span><ul class="mt-2 space-y-2"><li class="text-sm text-zinc-400 flex items-center gap-2"><div class="w-1.5 h-1.5 rounded-full bg-pink-500"></div> Speaking &amp; Listening</li><li class="text-sm text-zinc-400 flex items-center gap-2"><div class="w-1.5 h-1.5 rounded-full bg-pink-500"></div> Actions (dance, wave, etc.)</li></ul></div><a href="https://platform.zeroweight.ai/subscription" class="mt-8 w-full inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-orange-500 to-pink-500 px-5 py-3 text-sm font-semibold text-white hover:from-orange-400 hover:to-pink-400 transition shadow-lg shadow-orange-500/20">Get Starter</a></div><div class="relative rounded-2xl ring-1 ring-white/10 bg-zinc-900/40 p-6 sm:p-8 border-gradient before:rounded-2xl transition-all duration-1000 delay-400 opacity-0 translate-y-10"><div class="absolute inset-x-0 -top-px h-px bg-gradient-to-r from-transparent via-white/10 to-transparent rounded-full pointer-events-none"></div><h3 class="text-xl font-semibold text-white">Pro</h3><p class="text-sm text-zinc-400 mt-2">For production-level experiences and advanced control</p><div class="mt-6"><span class="text-4xl tracking-tight font-semibold text-white">$29</span><span class="text-zinc-500 text-base">/month</span></div><ul class="mt-8 space-y-3"><li class="flex items-start gap-3 text-sm text-zinc-300"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check text-orange-400 flex-shrink-0 mt-0.5" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg> <div class="leading-snug">Everything in Starter plan</div></li><li class="flex items-start gap-3 text-sm text-zinc-300"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check text-orange-400 flex-shrink-0 mt-0.5" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg> <div class="leading-snug">4000 credits per month</div></li><li class="flex items-start gap-3 text-sm text-zinc-300"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check text-orange-400 flex-shrink-0 mt-0.5" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg> <div class="leading-snug"><strong class="text-white">Developer-level emotion and action control</strong></div></li><li class="flex items-start gap-3 text-sm text-zinc-300"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check text-orange-400 flex-shrink-0 mt-0.5" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg> <div class="leading-snug">Priority processing and creator support</div></li></ul><div class="mt-4 pt-4 border-t border-white/5"><span class="text-xs font-semibold text-white uppercase tracking-wider">Full expressive capabilities</span><ul class="mt-2 space-y-2"><li class="text-sm text-zinc-400 flex items-center gap-2"><div class="w-1.5 h-1.5 rounded-full bg-pink-500"></div> Speaking &amp; Listening</li><li class="text-sm text-zinc-400 flex items-center gap-2"><div class="w-1.5 h-1.5 rounded-full bg-pink-500"></div> Custom emotions</li><li class="text-sm text-zinc-400 flex items-center gap-2"><div class="w-1.5 h-1.5 rounded-full bg-pink-500"></div> Actions (dance, wave, etc.)</li></ul></div><a href="https://platform.zeroweight.ai/subscription" class="mt-8 w-full inline-flex items-center justify-center gap-2 rounded-full bg-zinc-800/60 px-5 py-3 text-sm font-medium text-zinc-100 ring-1 ring-white/10 hover:bg-zinc-800 border-gradient before:rounded-full transition">Get Pro</a></div></div></section><section class="py-12 max-w-4xl mx-auto px-6 transition-all duration-1000 opacity-0 translate-y-10"><div class="rounded-2xl bg-zinc-900/30 border border-white/5 p-8 sm:flex items-center justify-between gap-8"><div class="flex-1"><div class="flex items-center gap-3 mb-3"><div class="bg-yellow-500/10 p-2 rounded-lg text-yellow-500"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-coins w-6 h-6" aria-hidden="true"><circle cx="8" cy="8" r="6"></circle><path d="M18.09 10.37A6 6 0 1 1 10.34 18"></path><path d="M7 6h1v4"></path><path d="m16.71 13.88.7.71-2.82 2.82"></path></svg></div><h3 class="text-2xl font-semibold text-white">Extra Credits (Optional Add-On)</h3></div><p class="text-zinc-400 mb-4">When your usage grows:</p><ul class="space-y-2 text-sm text-zinc-300"><li class="flex items-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-plus w-4 h-4 text-green-400" aria-hidden="true"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg> Buy additional credits anytime</li><li class="flex items-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-plus w-4 h-4 text-green-400" aria-hidden="true"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg> Use for creating new avatars, voice chat, actions</li><li class="flex items-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-plus w-4 h-4 text-green-400" aria-hidden="true"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg> No need to change your subscription tier</li></ul></div><div class="mt-6 sm:mt-0 flex-shrink-0"><a href="https://platform.zeroweight.ai/subscription" class="inline-flex items-center justify-center gap-2 rounded-xl bg-white/5 border border-white/10 px-6 py-4 text-sm font-medium text-white hover:bg-white/10 transition">Buy Credits</a></div></div></section><section class="py-16 max-w-5xl mx-auto px-6 transition-all duration-1000 opacity-0 translate-y-10"><h2 class="text-3xl font-semibold text-white text-center mb-10">What Uses Credits vs Subscription?</h2><div class="grid grid-cols-1 md:grid-cols-2 gap-8"><div class="rounded-2xl bg-zinc-900/20 border border-orange-500/20 p-8"><h3 class="text-lg font-semibold text-orange-400 mb-4 border-b border-orange-500/20 pb-3 inline-block">Covered by Subscription</h3><ul class="space-y-3"><li class="flex items-start gap-3"><span class="text-orange-500 mt-1">✓</span><span class="text-zinc-300">Running avatars on your website</span></li><li class="flex items-start gap-3"><span class="text-orange-500 mt-1">✓</span><span class="text-zinc-300">Real-time animation &amp; lip-sync</span></li></ul></div><div class="rounded-2xl bg-zinc-900/20 border border-green-500/20 p-8"><h3 class="text-lg font-semibold text-green-400 mb-4 border-b border-green-500/20 pb-3 inline-block">Uses Credits</h3><ul class="space-y-3"><li class="flex items-start gap-3"><span class="text-green-500 mt-1">•</span><span class="text-zinc-300">Avatar creation</span></li><li class="flex items-start gap-3"><span class="text-green-500 mt-1">•</span><span class="text-zinc-300">Voice chat usage</span></li></ul></div></div></section><div class="mx-auto max-w-7xl px-6"><div class="h-px w-full bg-white/10"></div></div><section id="faq" class="py-20 max-w-4xl mx-auto px-6 transition-all duration-1000 opacity-0 translate-y-10"><div class="text-center mb-16"><h2 class="text-3xl font-semibold text-white tracking-tight">FAQ</h2></div><div class="space-y-6"><div class="bg-zinc-900/30 border border-white/5 rounded-2xl p-6 hover:bg-zinc-800/30 transition-colors"><h3 class="text-lg font-medium text-white flex gap-3"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-circle-question-mark w-5 h-5 text-zinc-500 mt-0.5 flex-shrink-0" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><path d="M12 17h.01"></path></svg>Why do I need a subscription if inference is free?</h3><p class="mt-3 text-zinc-400 pl-8 leading-relaxed">The subscription gives you continuous access to the avatar model, updates, and platform. Inference is not billed per minute to keep usage simple and predictable.</p></div><div class="bg-zinc-900/30 border border-white/5 rounded-2xl p-6 hover:bg-zinc-800/30 transition-colors"><h3 class="text-lg font-medium text-white flex gap-3"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-circle-question-mark w-5 h-5 text-zinc-500 mt-0.5 flex-shrink-0" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><path d="M12 17h.01"></path></svg>What happens if I cancel my subscription?</h3><p class="mt-3 text-zinc-400 pl-8 leading-relaxed">You lose access to the model and AI studio. Your avatar can be still used for inference.</p></div><div class="bg-zinc-900/30 border border-white/5 rounded-2xl p-6 hover:bg-zinc-800/30 transition-colors"><h3 class="text-lg font-medium text-white flex gap-3"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-circle-question-mark w-5 h-5 text-zinc-500 mt-0.5 flex-shrink-0" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><path d="M12 17h.01"></path></svg>Can I upgrade or downgrade plans?</h3><p class="mt-3 text-zinc-400 pl-8 leading-relaxed">Yes. You can switch plans anytime to unlock higher resolution or features.</p></div><div class="bg-zinc-900/30 border border-white/5 rounded-2xl p-6 hover:bg-zinc-800/30 transition-colors"><h3 class="text-lg font-medium text-white flex gap-3"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-circle-question-mark w-5 h-5 text-zinc-500 mt-0.5 flex-shrink-0" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><path d="M12 17h.01"></path></svg>What is a 2D Talking Avatar?</h3><p class="mt-3 text-zinc-400 pl-8 leading-relaxed">A 2D talking avatar is a digital character powered by AI that can move, react, and lip-sync to audio in real time. Zero Weight AI provides the technology to easily embed these virtual characters directly onto your website.</p></div><div class="bg-zinc-900/30 border border-white/5 rounded-2xl p-6 hover:bg-zinc-800/30 transition-colors"><h3 class="text-lg font-medium text-white flex gap-3"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-circle-question-mark w-5 h-5 text-zinc-500 mt-0.5 flex-shrink-0" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><path d="M12 17h.01"></path></svg>Can I create my own Anime Waifu?</h3><p class="mt-3 text-zinc-400 pl-8 leading-relaxed">Yes! With our Starter and Pro plans, you can upload your own custom character designs to create a unique Anime Waifu tailored specifically for your brand or interactive experience.</p></div></div></section><section class="relative z-10 mt-10 pb-20 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto transition-all duration-1000 opacity-0 translate-y-10"><div class="rounded-2xl border border-white/10 bg-gradient-to-br from-zinc-900/70 to-zinc-900/40 p-8 text-center backdrop-blur shadow-2xl"><h2 class="text-3xl sm:text-4xl font-semibold tracking-tight text-white">A Subscription That Makes Sense</h2><p class="mt-2 text-zinc-300">Stable access. Predictable costs. Expressive AI avatars.</p><div class="mt-6 flex flex-col sm:flex-row items-center justify-center gap-3"><a href="https://platform.zeroweight.ai/subscription" class="inline-flex items-center gap-2 shadow-lg shadow-orange-900/25 text-sm font-semibold text-white bg-gradient-to-br from-orange-400 to-pink-500 rounded-full py-2.5 px-5 transform-gpu transition-all duration-300 ease-out hover:-translate-y-0.5 hover:shadow-[0_12px_24px_-6px_rgba(251,146,60,0.4)] hover:scale-[1.02] active:scale-[0.98]">Choose Your Plan<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-right w-4 h-4" aria-hidden="true"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg></a></div></div></section></main><footer class="relative z-10 border-t border-white/10 bg-[#0a0a12]"><div class="max-w-7xl mx-auto pt-10 pb-10 px-4 sm:px-6 lg:px-8"><div class="flex flex-col sm:flex-row items-center justify-between gap-6"><div class="flex flex-col sm:flex-row items-center gap-4 sm:gap-6"><div class="flex items-center gap-3"><span class="inline-flex h-9 w-9 items-center justify-center rounded-xl shadow-[0_0_0_1px_rgba(208,113,52,0.6)_inset]"><img src="images/logo.png" alt="ZeroWeight Logo" class="h-6 w-6 object-contain"/></span><span class="text-sm font-medium text-zinc-300">© <!-- -->2026<!-- --> ZeroWeight AI</span></div><div class="flex items-center gap-4 border-l border-white/10 pl-0 sm:pl-6"><a href="https://www.facebook.com/zeroweightai" target="_blank" rel="noopener noreferrer" class="text-zinc-500 hover:text-white transition-colors"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-facebook" aria-hidden="true"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"></path></svg></a><a href="https://www.linkedin.com/company/zeroweight-ai" target="_blank" rel="noopener noreferrer" class="text-zinc-500 hover:text-white transition-colors"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-linkedin" aria-hidden="true"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"></path><rect width="4" height="12" x="2" y="9"></rect><circle cx="4" cy="4" r="2"></circle></svg></a><a href="https://www.youtube.com/@ZeroWeightAI" target="_blank" rel="noopener noreferrer" class="text-zinc-500 hover:text-white transition-colors"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-youtube" aria-hidden="true"><path d="M2.5 17a24.12 24.12 0 0 1 0-10 2 2 0 0 1 1.4-1.4 49.56 49.56 0 0 1 16.2 0A2 2 0 0 1 21.5 7a24.12 24.12 0 0 1 0 10 2 2 0 0 1-1.4 1.4 49.55 49.55 0 0 1-16.2 0A2 2 0 0 1 2.5 17"></path><path d="m10 15 5-3-5-3z"></path></svg></a></div></div><div class="flex items-center gap-4 text-sm text-zinc-400"><a class="hover:text-zinc-200 transition-colors" href="terms-and-conditions.html" data-discover="true">Privacy Policy</a><a class="hover:text-zinc-200 transition-colors" href="terms-and-conditions.html" data-discover="true">Terms of Service</a><a class="hover:text-zinc-200 transition-colors" href="terms-and-conditions.html" data-discover="true">Refund Policy</a></div></div></div></footer></div></div>
+  </body>
+</html>

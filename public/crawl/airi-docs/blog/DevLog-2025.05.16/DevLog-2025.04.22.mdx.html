@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>AIRI</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <link rel="icon" type="image/svg+xml" href="https://airi.moeru.ai/favicon.svg" sizes="any" />
+    <link rel="apple-touch-icon" sizes="180x180" href="https://airi.moeru.ai/apple-touch-icon.png" />
+    <meta name="description" content="Open source attempt to create cyber companion.">
+    <meta name="apple-mobile-web-app-title" content="AIRI" />
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="rgb(18,18,18)" id="themeColor" />
+
+    <!-- Open Graph Protocol -->
+    <meta property="og:title" content="AIRI">
+    <meta property="og:site_name" content="AIRI">
+    <meta property="og:image" content="https://airi.moeru.ai/open-graph.png">
+    <meta property="og:description" content="Top 1 open source attempt to create cyber companion, capable of playing Minecraft, Factorio, Balatro, etc. .">
+    <meta property="og:url" content="https://airi.moeru.ai/docs/en/">
+
+    <!-- Open Graph Protocol extension, Twitter cards -->
+    <meta name="twitter:title" content="AIRI">
+    <meta name="twitter:description" content="Top 1 open source attempt to create cyber companion, capable of playing Minecraft, Factorio, Balatro, etc. .">
+    <meta name="twitter:image" content="https://airi.moeru.ai/open-graph.png">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:creator" content="Moeru AI">
+    <script>
+      ;(function () {
+        const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+        const setting = localStorage.getItem('vueuse-color-scheme') || 'auto'
+        if (setting === 'light' || (prefersDark && setting !== 'dark'))
+          document.querySelector('#themeColor')?.setAttribute('content', 'rgb(255,255,255)')
+      })()
+    </script>
+    <script>
+      ;(function () {
+        const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+        const setting = localStorage.getItem('vueuse-color-scheme') || 'auto'
+        if (setting === 'dark' || (prefersDark && setting !== 'light'))
+          document.documentElement.classList.toggle('dark', true)
+      })()
+    </script>
+    <!-- Privacy-friendly analytics by Plausible -->
+    <script async src="https://moeru-ai-airi-helper.kwaa.workers.dev/remote-assets/page-external-data/js/script.js"></script>
+    <script>
+      window.plausible=window.plausible||function(){(plausible.q=plausible.q||[]).push(arguments)},plausible.init=plausible.init||function(i){plausible.o=i||{}};
+      plausible.init({
+        endpoint: "https://moeru-ai-airi-helper.kwaa.workers.dev/api/v1/page-external-data/submit"
+      })
+    </script>
+    <script src="../../CubismSdkForWeb-5-r.3/Core/live2dcubismcore.min.js"></script>
+    <script type="module" crossorigin src="../../index-DOINlHLw.js"></script>
+    <link rel="modulepreload" crossorigin href="https://airi.moeru.ai/assets/_plugin-vue_export-helper-jUItB9cv.js">
+    <link rel="modulepreload" crossorigin href="https://airi.moeru.ai/assets/chunk-DseTPa7n.js">
+    <link rel="modulepreload" crossorigin href="https://airi.moeru.ai/assets/preload-helper-DQVmg1Zk.js">
+    <link rel="modulepreload" crossorigin href="https://airi.moeru.ai/assets/vue.runtime.esm-bundler-Ch639kna.js">
+    <link rel="modulepreload" crossorigin href="https://airi.moeru.ai/assets/vue-i18n.runtime-CIl_6avc.js">
+    <link rel="modulepreload" crossorigin href="https://airi.moeru.ai/assets/pinia-uVf3eGY8.js">
+    <link rel="modulepreload" crossorigin href="https://airi.moeru.ai/assets/dist-jc0CLhOh.js">
+    <link rel="modulepreload" crossorigin href="https://airi.moeru.ai/assets/general-DP3eaP70.js">
+    <link rel="modulepreload" crossorigin href="https://airi.moeru.ai/assets/src-CUF-g6gb.js">
+    <link rel="modulepreload" crossorigin href="https://airi.moeru.ai/assets/use-analytics-B5OR8_1S.js">
+    <link rel="modulepreload" crossorigin href="https://airi.moeru.ai/assets/devtools-lag-rjzbRJoC.js">
+    <link rel="modulepreload" crossorigin href="https://airi.moeru.ai/assets/dist-ABE9qPa1.js">
+    <link rel="modulepreload" crossorigin href="https://airi.moeru.ai/assets/src-CL7etmGK.js">
+    <link rel="modulepreload" crossorigin href="https://airi.moeru.ai/assets/context-c10xPp3f-KLmfQiZI.js">
+    <link rel="modulepreload" crossorigin href="https://airi.moeru.ai/assets/src-CTkYOGiO-C294tcWt.js">
+    <link rel="modulepreload" crossorigin href="https://airi.moeru.ai/assets/index.browser-B8juHfhW.js">
+    <link rel="modulepreload" crossorigin href="https://airi.moeru.ai/assets/settings-3XR4XY8A.js">
+    <link rel="modulepreload" crossorigin href="https://airi.moeru.ai/assets/clamp-Crsw_Idh.js">
+    <link rel="modulepreload" crossorigin href="https://airi.moeru.ai/assets/three.module-DSCOMp0V.js">
+    <link rel="modulepreload" crossorigin href="https://airi.moeru.ai/assets/tres-ChRnDB23.js">
+    <link rel="modulepreload" crossorigin href="https://airi.moeru.ai/assets/use-breakpoints-nWFAxuP5.js">
+    <link rel="modulepreload" crossorigin href="https://airi.moeru.ai/assets/auth-BXTxZq-P.js">
+    <link rel="modulepreload" crossorigin href="https://airi.moeru.ai/assets/semaphore-COoSG9p6.js">
+    <link rel="modulepreload" crossorigin href="https://airi.moeru.ai/assets/mutex-BynuW4Nw.js">
+    <link rel="modulepreload" crossorigin href="https://airi.moeru.ai/assets/core-CtjKl_op.js">
+    <link rel="modulepreload" crossorigin href="https://airi.moeru.ai/assets/providers-hhlTt8ur.js">
+    <link rel="modulepreload" crossorigin href="https://airi.moeru.ai/assets/merge-CetJLJuu.js">
+    <link rel="modulepreload" crossorigin href="https://airi.moeru.ai/assets/dist-WgsSAPbC.js">
+    <link rel="modulepreload" crossorigin href="https://airi.moeru.ai/assets/stream-transcription-BrdGLDM-.js">
+    <link rel="modulepreload" crossorigin href="https://airi.moeru.ai/assets/protocol-BzbMDBZ4.js">
+    <link rel="modulepreload" crossorigin href="https://airi.moeru.ai/assets/websocket-inspector-CX-eM4pH.js">
+    <link rel="modulepreload" crossorigin href="https://airi.moeru.ai/assets/dist-DGbAgF-u.js">
+    <link rel="modulepreload" crossorigin href="https://airi.moeru.ai/assets/dist-DwZGi7CI.js">
+    <link rel="modulepreload" crossorigin href="https://airi.moeru.ai/assets/vue-router-BuCW4_be.js">
+    <link rel="modulepreload" crossorigin href="https://airi.moeru.ai/assets/widgets-4qdQSWLa.js">
+    <link rel="modulepreload" crossorigin href="https://airi.moeru.ai/assets/gaming-minecraft-BlZUaHQU.js">
+    <link rel="modulepreload" crossorigin href="https://airi.moeru.ai/assets/animation-MDRqJKNK.js">
+    <link rel="modulepreload" crossorigin href="https://airi.moeru.ai/assets/dist-B5fgwmaf.js">
+    <link rel="modulepreload" crossorigin href="https://airi.moeru.ai/assets/browser-M2cfVgJe.js">
+    <link rel="modulepreload" crossorigin href="https://airi.moeru.ai/assets/libs-sCG85RMe.js">
+    <link rel="modulepreload" crossorigin href="https://airi.moeru.ai/assets/__vite-browser-external-dKiEd3fs.js">
+    <link rel="modulepreload" crossorigin href="https://airi.moeru.ai/assets/output-BRbehvtZ.js">
+    <link rel="modulepreload" crossorigin href="https://airi.moeru.ai/assets/auth-z8gfp0JQ.js">
+    <link rel="modulepreload" crossorigin href="https://airi.moeru.ai/assets/audio-8YOaUzco.js">
+    <link rel="modulepreload" crossorigin href="https://airi.moeru.ai/assets/twitter-DPiDL9wm.js">
+    <link rel="modulepreload" crossorigin href="https://airi.moeru.ai/assets/onboarding-DIzCS2fC.js">
+    <link rel="modulepreload" crossorigin href="https://airi.moeru.ai/assets/basic-input-file-DkCV18X0.js">
+    <link rel="modulepreload" crossorigin href="https://airi.moeru.ai/assets/components-B6rXwoRv.js">
+    <link rel="modulepreload" crossorigin href="https://airi.moeru.ai/assets/index-DoHiaFQM-SN62boho.js">
+    <link rel="modulepreload" crossorigin href="https://airi.moeru.ai/assets/vision-FJNNy6CZ.js">
+    <link rel="modulepreload" crossorigin href="https://airi.moeru.ai/assets/storage-DuDMEhVa.js">
+    <link rel="modulepreload" crossorigin href="https://airi.moeru.ai/assets/composables-YN9nBzJd.js">
+    <link rel="modulepreload" crossorigin href="https://airi.moeru.ai/assets/chat-DS7SWTfs.js">
+    <link rel="modulepreload" crossorigin href="https://airi.moeru.ai/assets/HeaderLink-FsoXL2P-.js">
+    <link rel="modulepreload" crossorigin href="https://airi.moeru.ai/assets/eye-motions-CrZLfKtS.js">
+    <link rel="modulepreload" crossorigin href="https://airi.moeru.ai/assets/process.worklet-Bi94GmdH.js">
+    <link rel="modulepreload" crossorigin href="https://airi.moeru.ai/assets/hearing-N5LKVWAD.js">
+    <link rel="modulepreload" crossorigin href="https://airi.moeru.ai/assets/dist-Du_GRXgj.js">
+    <link rel="modulepreload" crossorigin href="https://airi.moeru.ai/assets/speech-runtime-5vujLCCQ.js">
+    <link rel="modulepreload" crossorigin href="https://airi.moeru.ai/assets/constants-DPaGdAdU.js">
+    <link rel="stylesheet" crossorigin href="../../src-3fp7q8hE.css">
+    <link rel="stylesheet" crossorigin href="../../widgets-aBkngXx5.css">
+    <link rel="stylesheet" crossorigin href="../../components-CLcyjsT0.css">
+    <link rel="stylesheet" crossorigin href="../../HeaderLink-CgR8yqLo.css">
+    <link rel="stylesheet" crossorigin href="../../index-DH243wKv.css">
+  <link rel="manifest" href="../../manifest.webmanifest"></head>
+  <body class="font-sans">
+    <div id="app"></div>
+    <noscript> This website requires JavaScript to function properly. Please enable JavaScript to continue. </noscript>
+  </body>
+</html>
