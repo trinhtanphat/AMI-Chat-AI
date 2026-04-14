@@ -20,7 +20,12 @@ services:
       - NEXTAUTH_SECRET=7zVLMloH8aAOlyJhRgQ3l76WE9Oryvs17uFwVg67OaE=
       - ADMIN_EMAIL=admin@vnso.vn
       - ADMIN_PASSWORD=Admin@@6789@@
-      - NODE_TLS_REJECT_UNAUTHORIZED=0
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://0.0.0.0:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
     volumes:
       - amichat-data:/app/prisma
 
