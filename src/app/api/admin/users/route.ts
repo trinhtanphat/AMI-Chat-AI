@@ -3,6 +3,10 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { hash } from 'bcryptjs'
+import { validatePassword, sanitizeMessage } from '@/lib/sanitize'
+import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit'
+
+const VALID_ROLES = ['user', 'admin'] as const
 
 async function isAdmin() {
   const session = await getServerSession(authOptions)
@@ -33,11 +37,21 @@ export async function POST(req: NextRequest) {
   const session = await isAdmin()
   if (!session) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
+  const rl = checkRateLimit(`admin:${session.user.id}`, RATE_LIMITS.admin)
+  if (!rl.allowed) return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
+
   const { email, name, password, role } = await req.json()
 
   if (!email || !name || !password) {
     return NextResponse.json({ error: 'Missing fields' }, { status: 400 })
   }
+
+  const pwCheck = validatePassword(password)
+  if (!pwCheck.valid) {
+    return NextResponse.json({ error: pwCheck.message }, { status: 400 })
+  }
+
+  const safeRole = VALID_ROLES.includes(role) ? role : 'user'
 
   const existing = await prisma.user.findUnique({ where: { email } })
   if (existing) {
@@ -46,7 +60,7 @@ export async function POST(req: NextRequest) {
 
   const hashedPassword = await hash(password, 12)
   const user = await prisma.user.create({
-    data: { email, name, password: hashedPassword, role: role || 'user' },
+    data: { email, name: sanitizeMessage(name).slice(0, 100), password: hashedPassword, role: safeRole },
   })
 
   return NextResponse.json({ id: user.id, email: user.email, name: user.name }, { status: 201 })
@@ -56,15 +70,22 @@ export async function PATCH(req: NextRequest) {
   const session = await isAdmin()
   if (!session) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
+  const rl = checkRateLimit(`admin:${session.user.id}`, RATE_LIMITS.admin)
+  if (!rl.allowed) return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
+
   const { id, name, role, isActive, password } = await req.json()
 
   if (!id) return NextResponse.json({ error: 'User ID required' }, { status: 400 })
 
   const data: any = {}
-  if (name !== undefined) data.name = name
-  if (role !== undefined) data.role = role
-  if (isActive !== undefined) data.isActive = isActive
-  if (password) data.password = await hash(password, 12)
+  if (name !== undefined) data.name = sanitizeMessage(name).slice(0, 100)
+  if (role !== undefined && VALID_ROLES.includes(role)) data.role = role
+  if (isActive !== undefined) data.isActive = Boolean(isActive)
+  if (password) {
+    const pwCheck = validatePassword(password)
+    if (!pwCheck.valid) return NextResponse.json({ error: pwCheck.message }, { status: 400 })
+    data.password = await hash(password, 12)
+  }
 
   const user = await prisma.user.update({ where: { id }, data })
 

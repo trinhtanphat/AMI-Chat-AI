@@ -1,9 +1,27 @@
 import { withAuth } from 'next-auth/middleware'
+import { NextResponse } from 'next/server'
 
 export default withAuth({
   callbacks: {
     authorized: ({ token, req }) => {
       const path = req.nextUrl.pathname
+
+      // CSRF protection: verify Origin header on state-changing requests
+      if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method) && path.startsWith('/api/')) {
+        const origin = req.headers.get('origin')
+        const host = req.headers.get('host')
+        // Allow requests with no origin (same-origin, server-side) or matching origin
+        if (origin) {
+          try {
+            const originHost = new URL(origin).host
+            if (originHost !== host) {
+              return false
+            }
+          } catch {
+            return false
+          }
+        }
+      }
 
       // Admin routes require admin role
       if (path.startsWith('/admin') || path.startsWith('/api/admin')) {

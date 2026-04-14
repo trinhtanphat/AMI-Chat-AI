@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { sanitizeMessage } from '@/lib/sanitize'
 
 // GET messages for a conversation
 export async function GET(
@@ -71,8 +72,8 @@ export async function PATCH(
   }
 
   const data: any = {}
-  if (title !== undefined) data.title = title
-  if (isPinned !== undefined) data.isPinned = isPinned
+  if (title !== undefined) data.title = sanitizeMessage(title).slice(0, 200)
+  if (isPinned !== undefined) data.isPinned = Boolean(isPinned)
 
   const updated = await prisma.conversation.update({
     where: { id: params.id },
